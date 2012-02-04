@@ -27,6 +27,13 @@ stack_end       =       0xFFFF
 
 init:
     ld      sp, #stack_end
+; put all registers in a known state
+    ld      b, #0xF0
+    ld      c, #0xF0
+    ld      d, #0xF0
+    ld      e, #0xF0
+    ld      h, #0xF0
+    ld      l, #0xF0
     jp      start
 
 
