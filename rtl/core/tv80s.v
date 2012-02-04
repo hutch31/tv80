@@ -153,7 +153,7 @@ module tv80s (/*AUTOARG*/
               
             end // else: !if(mcycle[0])
           
-          if (tstate[2] && wait_n == 1'b1)
+          if (tstate[2] && wait_n == 1'b1 && !write && !no_read)
             di_reg <= #1 di;
         end // else: !if(!reset_n)
     end // always @ (posedge clk or negedge reset_n)
