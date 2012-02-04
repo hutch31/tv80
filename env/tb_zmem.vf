@@ -1,0 +1,23 @@
++incdir+env
+env/tb_sd_mem.v
+rtl/core/tv80_alu.v
+rtl/core/tv80_mcode.v
+rtl/core/tv80_reg.v
+rtl/core/tv80_core.v
+rtl/core/tv80s.v
+rtl/core/sd_access64.v
+rtl/core/sd_zmem.v
++libext+.v
+-y /home/hutch/proj/srdydrdy_lib/rtl/verilog/utility
+-y /home/hutch/proj/srdydrdy_lib/rtl/verilog/closure
+-y /home/hutch/proj/srdydrdy_lib/rtl/verilog/memory
+rtl/simple_gmii/simple_gmii_top.v
+rtl/simple_gmii/simple_gmii_core.v
+rtl/simple_gmii/simple_gmii_regs.v
+rtl/simple_gmii/sync2.v
+rtl/simple_gmii/ram_1r_1w.v
+rtl/uart/T16450.v
+env/env_io.v
+env/op_decode.v
+env/async_mem.v
+
