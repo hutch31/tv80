@@ -38,12 +38,12 @@ init:
 
 
 passed:
-                ld      a, #0x0
+                ld      a, #0x1
                 out     (_sim_ctl_port), a
                 halt
 
 failed:
-                ld      a, #0x0
+                ld      a, #0x2
                 out     (_sim_ctl_port), a
 		halt
 
@@ -123,7 +123,14 @@ fail_routine:
 	out	(_msg_port), a
 	jp      failed
 	
-
+reset_timeout:
+        push    af
+        ld      a, #2
+        out     (#_timeout_port), a
+        ld      a, #1
+        out     (#_timeout_port), a
+        pop     af
+        ret       
 
 starting_test:  .ascii "Starting test"
 	.db 0x0A .db 0x00
@@ -826,7 +833,10 @@ add_73:		cp	#0x80+1
 		jr	z,adc_0
 	ld	b, #73
 	jp	fail_routine
-adc_0:		nop
+adc_0:
+        call    reset_timeout
+		
+                nop
 	ld hl, #msg_adc_0
 	call print_sub
 		ld	a,#0                 ;clear cry 
@@ -915,13 +925,14 @@ adc_19:		cp	#1
 		jr	z,adc_20
 	ld	b, #19
 	jp	fail_routine
-adc_20:		ld	a,#0xaa
+adc_20:		
+                ld	a,#0xaa
 		ld	e,#0x7f
 		adc	a,e
 		jr	c,adc_21
 	ld	b, #20
 	jp	fail_routine
-adc_21:		ld	e,#0x2
+adc_21:		ld	e,#0x2b
 		adc	a,e
 		cp	#0x55
 		jr	z,adc_22
@@ -1688,7 +1699,8 @@ sbc_65:		cp	#0x55+1
 		jr	z,and_0
 	ld	b, #65
 	jp	fail_routine
-and_0:		nop
+and_0:		
+                call    reset_timeout
 	ld hl, #msg_and_0
 	call print_sub
 		ld	a,#0xff
@@ -2146,7 +2158,8 @@ or_50:		cp	#0x55
 		jr	z,xor_0
 	ld	b, #50
 	jp	fail_routine
-xor_0:		nop
+xor_0:		
+                call    reset_timeout
 	ld hl, #msg_xor_0
 	call print_sub
 		ld	a,#0xff
@@ -2166,7 +2179,7 @@ xor_2:		ld	b,#0x80
 xor_3:		jp	po,xor_4
 	ld	b, #3
 	jp	fail_routine
-xor_4:		cp	#0x2
+xor_4:		cp	#0x2a
 		jr	z,xor_5
 	ld	b, #4
 	jp	fail_routine
@@ -2407,7 +2420,8 @@ xor_58:		cp	#0x55
 		jr	z,cp_0
 	ld	b, #58
 	jp	fail_routine
-cp_0:		nop
+cp_0:		
+                call    reset_timeout
 	ld hl, #msg_cp_0
 	call print_sub
 		ld	a,#0
@@ -2651,7 +2665,8 @@ cp_59:		cp	a,-1(iy)
 cp_60:		jr	nc,inc_0
 	ld	b, #60
 	jp	fail_routine
-inc_0:		nop
+inc_0:		
+                call    reset_timeout
 	ld hl, #msg_inc
 	call print_sub
 		ld	a,#0x7f
@@ -3151,7 +3166,9 @@ dec_45:		ld	a,#0xaa
 		jr	z,cpl_0
 	ld	b, #45
 	jp	fail_routine
-cpl_0:		ld	a,#0xff
+cpl_0:
+                call    reset_timeout
+		ld	a,#0xff
 		cpl
 		cp	a,#0
 		jr	z,cpl_1
