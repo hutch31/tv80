@@ -63,11 +63,17 @@ module tv80_reg (/*AUTOARG*/
   // break out ram bits for waveform debug
 // synopsys translate_off
   wire [7:0] B = RegsH[0];
+  wire [7:0] BP = RegsH[4];
   wire [7:0] C = RegsL[0];
+  wire [7:0] CP = RegsL[4];
   wire [7:0] D = RegsH[1];
+  wire [7:0] DP = RegsH[5];
   wire [7:0] E = RegsL[1];
+  wire [7:0] EP = RegsL[5];
   wire [7:0] H = RegsH[2];
+  wire [7:0] HP = RegsH[6];
   wire [7:0] L = RegsL[2];
+  wire [7:0] LP = RegsL[6];
 
   wire [15:0] IX = { RegsH[3], RegsL[3] };
   wire [15:0] IY = { RegsH[7], RegsL[7] };

@@ -3219,18 +3219,18 @@ end_of_test:
         jp      passed
 
 
-var1:		.db	#0x0
-var2:		.db	#0x0
-var3:		.db	#0x0
-var4:		.db	#0x0
-var5:		.db	#0x0
+var1:		.db	#0xFF
+var2:		.db	#0x55
+var3:		.db	#0x80
+var4:		.db	#0xAA
+var5:		.db	#0x7F
 
-w_var1:		.dw	#0x0
-w_var2:		.dw	#0x0
-w_var3:		.dw	#0x0
-w_var4:		.dw	#0x0
-w_var5:		.dw	#0x0
-w_var6:		.dw	#0x0
+w_var1:		.dw	#0x1234
+w_var2:		.dw	#0x55aa
+w_var3:		.dw	#0x7fff
+w_var4:		.dw	#0x8000
+w_var5:		.dw	#0xaa55
+w_var6:		.dw	#0xffff
 
 .area    _DATA
 
