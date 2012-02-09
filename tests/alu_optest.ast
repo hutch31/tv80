@@ -58,15 +58,15 @@ print_sub:
 	push	bc
 	ld	b, a
 
-print_sub_loop:	
+print_sub_loop$:	
 	ld	a, (hl)
 	cp	#0x0
-	jp	z, print_sub_exit
+	jp	z, print_sub_exit$
 	out	(_msg_port), a
 	inc	hl
-	jp	print_sub_loop
+	jp	print_sub_loop$
 	
-print_sub_exit:
+print_sub_exit$:
 	ld	a, b
 	pop	bc
 	ret
@@ -82,11 +82,11 @@ print_number:
 	sra	a
 	sra	a
 	cp	a, #10
-	jp	p, alpha_0
+	jp	p, alpha_0$
 	add	#48		; ordinal value of '0'
 	out	(_msg_port), a
 	jp	second_digit
-alpha_0:
+alpha_0$:
 	add	#55              ; 'A' - 10
 	out	(_msg_port), a
 
@@ -95,21 +95,20 @@ second_digit:
 	and	#0x0F
 	
 	cp	a, #10
-	jp	p, alpha_1
+	jp	p, alpha_1$
 	add	#48
 	out	(_msg_port), a
-	jp	print_number_exit
+	jp	print_number_exit$
 
-alpha_1:
+alpha_1$:
 	add	#55              ; 'A' - 10
 	out	(_msg_port), a
 
-print_number_exit:	
+print_number_exit$:	
 	pop	bc
 	ret
 
-fail_text: .ascii   "Test failed at checkpoint #"
-	.db	#0x0
+fail_text: .asciz   "Test failed at checkpoint #"
 
 ; expects failing message number in B
 fail_routine:
@@ -132,25 +131,22 @@ reset_timeout:
         pop     af
         ret       
 
-starting_test:  .ascii "Starting test"
-	.db 0x0A .db 0x00
+starting_test:  .asciz "Starting test\n"
 
-push_message: .ascii "push_0"
-        .db 0xa
-        .db 0x0
+push_message: .asciz "push_0\n"
 
-msg_ex_0: .ascii "ex_0" .db 0xa .db 0x0
-msg_add_0: .ascii "add_0" .db 0xa .db 0x0
-msg_adc_0: .ascii "adc_0" .db 0xa .db 0x0
-msg_sub_0: .ascii "sub_0" .db 0xa .db 0x0
-msg_sbc_0: .ascii "sbc_0" .db 0xa .db 0x0
-msg_and_0: .ascii "and_0" .db 0xa .db 0x0
-msg_or_0: .ascii "or_0" .db 0xa .db 0x0
-msg_xor_0: .ascii "xor_0" .db 0xa .db 0x0
-msg_cp_0: .ascii "cp_0" .db 0xa .db 0x0
-msg_inc: .ascii "inc" .db 0xa .db 0x0
-msg_dec: .ascii "dec" .db 0xa .db 0x0
-msg_neg: .ascii "neg" .db 0xa .db 0x0
+msg_ex_0: .asciz "ex_0\n"
+msg_add_0: .asciz "add_0\n"
+msg_adc_0: .asciz "adc_0\n"
+msg_sub_0: .asciz "sub_0\n"
+msg_sbc_0: .asciz "sbc_0\n"
+msg_and_0: .asciz "and_0\n"
+msg_or_0: .asciz "or_0\n"
+msg_xor_0: .asciz "xor_0\n"
+msg_cp_0: .asciz "cp_0\n"
+msg_inc: .asciz "inc\n"
+msg_dec: .asciz "dec\n"
+msg_neg: .asciz "neg\n"
 
 error_cnt:
         .db     0
