@@ -1480,7 +1480,6 @@ module tv80_mcode
                   case (1'b1) // MCycle
                     MCycle[0] :
                       begin
-                        TStates = 3'b101;
                         Set_Addr_To = aSP;
                       end
                     
