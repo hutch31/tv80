@@ -1,0 +1,41 @@
+#!/usr/bin/python
+
+# run script for compiling verilog file our.v
+# to execute simulation, run obj_dir/Vour
+
+import sys, os
+
+#os.environ['VERILATOR_ROOT']='/xpliant/tools/verilator'
+os.environ['VERILATOR_ROOT']='/home/guy/scratch/verilator'
+os.environ['PATH']+=':'+os.environ['VERILATOR_ROOT']
+#export PATH=$VERILATOR_ROOT/bin:$PATH
+os.environ['SYSTEMC_LIBDIR']='/xpliant/tools/systemc-2.2/lib-linux64'
+includes="-Iobj_dir -I$VERILATOR_ROOT/include -I/usr/include/python2.7 -I/xpliant/tools/vcs/F-2011.12-3/include/"
+libdirs = ["../env" "../rtl/core" "../../../rtl/verilog/forks","../../../rtl/verilog/buffers","../../../rtl/verilog/memory"]
+
+basename = "pytb_top"
+
+def verilate (basename, libdirs):
+    cmd = "verilator -CFLAGS -fPIC -DSDLIB_CLOCKING=\"posedge clk\" -DSDLIB_DELAY=\"\" -Wall --trace --cc -f env.vf"
+
+    os.system (cmd)
+    os.chdir ("obj_dir")
+    os.system ("make -f V%s.mk" % basename)
+    os.chdir ("..")
+
+
+verilate (basename,libdirs)
+cfiles = ['sim_launch.cpp','sim_launch_wrap.cxx',os.environ['VERILATOR_ROOT']+'/include/verilated.cpp',os.environ['VERILATOR_ROOT']+'/include/verilated_vcd_c.cpp',os.environ['VERILATOR_ROOT']+'/include/verilated_dpi.cpp']
+
+os.system ('swig -c++ -python sim_launch.i')
+#g++ -fPIC -c sim_launch.cpp    $INCLUDES
+#g++ -fPIC -c sim_launch_wrap.c -I/usr/include/python2.7/
+#g++ -fPIC -c $VERILATOR_ROOT/share/verilator/include/verilated.cpp
+#
+for cfile in cfiles:
+    os.system ("g++ -fPIC -c %s %s" % (cfile,includes))
+
+os.system ("g++ -shared sim_launch.o sim_launch_wrap.o verilated.o verilated_vcd_c.o verilated_dpi.o obj_dir/V%s__ALL.a -o _vlaunch.so" % basename)
+
+#python pytest.py
+
