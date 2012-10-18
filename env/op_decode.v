@@ -2739,11 +2739,11 @@ task decode1;
 endtask
 
   task decode;
-    input [7:0] byte;
+    input [7:0] byte_var;
     inout [7:0] state;
     begin
       if (state == 0)
-        decode0 (byte, state);
+        decode0 (byte_var, state);
       else if (state[7:4] == 1)
         begin
           state[3:0] = state[3:0] - 1;
@@ -2752,7 +2752,7 @@ endtask
         end
       else
         begin
-          decode1 (byte, state);
+          decode1 (byte_var, state);
         end
     end
   endtask // decode
