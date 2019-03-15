@@ -6,6 +6,8 @@
 // z_asz -- number of Z80 address bits being decoded
 // s_asz -- address size of scoreboard (
 
+`define TV80DELAY
+
 module sd_access64
   #(parameter z_asz = 14,
     parameter s_asz = (z_asz-3))
@@ -177,12 +179,12 @@ module sd_access64
 	end
       else
 	begin
-	  state <= #1 nxt_state;
-	  ack   <= #1 nxt_ack;
-//	  rd_data <= #1 nxt_rd_data;
-	  cvld  <= #1 nxt_cvld;
-	  caddr <= #1 nxt_caddr;
-	  cline <= #1 nxt_cline;
+	  state <= `TV80DELAY nxt_state;
+	  ack   <= `TV80DELAY nxt_ack;
+//	  rd_data <= `TV80DELAY nxt_rd_data;
+	  cvld  <= `TV80DELAY nxt_cvld;
+	  caddr <= `TV80DELAY nxt_caddr;
+	  cline <= `TV80DELAY nxt_cline;
 	end
     end // always @ (posedge clk or posedge reset)
 
