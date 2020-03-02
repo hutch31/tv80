@@ -1,7 +1,7 @@
 
-sfr at 0x80 sim_ctl_port;
-sfr at 0x81 msg_port;
-sfr at 0x82 timeout_port;
+__sfr __at 0x80 sim_ctl_port;
+__sfr __at 0x81 msg_port;
+__sfr __at 0x82 timeout_port;
 
 void nmi_isr() {}
 void isr() {}

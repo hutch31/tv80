@@ -30,18 +30,18 @@
 
 #include "tv80_scenv.h"
 
-sfr at 0x80 sim_ctl_port;
-sfr at 0x81 msg_port;
-sfr at 0x82 timeout_port;
-sfr at 0x83 max_timeout_low;
-sfr at 0x84 max_timeout_high;
-sfr at 0x90 intr_cntdwn;
-sfr at 0x91 cksum_value;
-sfr at 0x92 cksum_accum;
-sfr at 0x93 inc_on_read;
-sfr at 0x94 randval;
-sfr at 0x95 nmi_cntdwn;
-sfr at 0xA0 nmi_trig_opcode;
+__sfr __at 0x80 sim_ctl_port;
+__sfr __at 0x81 msg_port;
+__sfr __at 0x82 timeout_port;
+__sfr __at 0x83 max_timeout_low;
+__sfr __at 0x84 max_timeout_high;
+__sfr __at 0x90 intr_cntdwn;
+__sfr __at 0x91 cksum_value;
+__sfr __at 0x92 cksum_accum;
+__sfr __at 0x93 inc_on_read;
+__sfr __at 0x94 randval;
+__sfr __at 0x95 nmi_cntdwn;
+__sfr __at 0xA0 nmi_trig_opcode;
 
 /* now included from scenv.h
 #define SC_TEST_PASSED 0x01
