@@ -37,13 +37,13 @@ def number (str):
             return int (mobj.group(3), radix)
         else:
             return int(str)
-    except ValueError:
-        print "ERROR: number conversion of %s failed" % str
+    except ValueError as verr:
+        print("ERROR: number conversion of %s failed (%s)" % (str, verr))
         return 0
 
 def int2bin (n):
     bStr = ''
-    if (n < 0): raise ValueError, "must be positive integer"
+    if (n < 0): raise ValueError("must be positive integer")
     if (n == 0): return '0'
     while (n > 0):
         bStr = str (n%2) + bStr
@@ -197,7 +197,7 @@ class decoder_group:
     def verilog (self):
         self.build()
         result = 'module ' + self.name + ' (\n'
-        result += string.join (map (lambda x: x.name, self.ports), ',')
+        result += ','.join (map (lambda x: x.name, self.ports))
         result += ');\n'
 
         # print port list
@@ -295,7 +295,7 @@ class register_group:
         int_nets = []
         for r in self.registers:
             if r.interrupt: int_nets.append (r.name + "_int")
-        self.blocks.append (comb_block (["int_n = ~(" + string.join (int_nets, ' | ') + ");"]))
+        self.blocks.append (comb_block (["int_n = ~(" + ' | '.join (int_nets) + ");"]))
 
     def wait_logic (self):
         wait_nets = []
@@ -369,7 +369,7 @@ class register_group:
         self.post()
         
         result = 'module ' + self.name + ' (\n'
-        result += string.join (map (lambda x: x.name, self.ports), ',')
+        result += ','.join (map (lambda x: x.name, self.ports))
         result += ');\n'
 
         # print port list
@@ -431,7 +431,7 @@ class register_group:
         elif (type == 'ext_load'):
             width = params['width']
             regs = self.calc_hold (width)
-            print "ext_load %s, splitting into %d regs" % (params['name'],regs)
+            print("ext_load %s, splitting into %d regs" % (params['name'],regs))
             for i in range(0,regs):
                 last = (i == (regs-1))
                 self.add (ext_load_reg(params['name'],self.data_size,i,params['width'],last))
@@ -439,7 +439,7 @@ class register_group:
         elif (type == 'count'):
             self.add (count_reg (params['name'],params['width']))
         else:
-            print "Unknown register type",type
+            print("Unknown register type",type)
 
     def add (self, reg):
         self.registers.append (reg)
@@ -499,14 +499,14 @@ class ext_load_reg (basic_register):
         self.eindex = eindex
         self.twidth = twidth
         self.last = last
-        print "Adding %s eindex %d" % (name, eindex)
+        print("Adding %s eindex %d" % (name, eindex))
 
     def type (self): return "ext_load"
 
     def write_cap (self): return 1
 
     def verilog_body (self):
-        print "Building %s eindex %d" % (self.name, self.eindex)
+        print("Building %s eindex %d" % (self.name, self.eindex))
 
         txt = ""
         low = self.eindex * self.width
@@ -577,7 +577,7 @@ class config_reg (basic_register):
         vstr += seq_block ('clk', statements)
         if (len(self.fields) != 0):
             vstr += "assign {"
-            vstr += ','.join (map(lambda(x):x.name,self.fields))
+            vstr += ','.join (map(lambda x:x.name,self.fields))
             vstr += "} = %s;\n" % self.name
         return vstr
 
@@ -681,7 +681,7 @@ class soft_set_reg (config_reg):
         txt += seq_block ('clk', statements)
         if (len(self.fields) != 0):
             txt += "assign {"
-            txt += ','.join (map(lambda(x):x.name,self.fields))
+            txt += ','.join (map(lambda x:x.name,self.fields))
             txt += "} = %s;\n" % self.name
         return txt
 
@@ -721,7 +721,7 @@ class write_stb_reg (config_reg):
 
         if (len(self.fields) != 0):
             txt += "assign {"
-            txt += ','.join (map(lambda(x):x.name,self.fields))
+            txt += ','.join (map(lambda x:x.name,self.fields))
             txt += "} = %s;\n" % self.name
 
         return txt+seq_block ('clk', statements)

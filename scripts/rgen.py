@@ -25,16 +25,16 @@
 
 import reglib
 import xml.dom.minidom
-import sys, os, re, string
+import sys, os, string
 
 def node_info (node):
-    print "Methods:",dir(node)
-    print "Child Nodes:",node.childNodes
+    print("Methods:",dir(node))
+    print("Child Nodes:",node.childNodes)
 
 def create_addr_vh (filename, dg):
     fh = open (filename, 'w')
     for d in dg.ranges:
-        print repr(d)
+        print(repr(d))
         ba = d.get_base_addr()
         fh.write ("`define %s 'h%x\n" % (d.name.upper(), ba))
     fh.close()
@@ -101,11 +101,11 @@ def create_register (rg, node):
     #    if anode.nodeType = anode.ATTRIBUTE_NODE:
     #        params[anode.nodeName] = anode.nodeValue
 
-    print "Reg:",params['name'], " width:",params['width']
+    print("Reg:",params['name'], " width:",params['width'])
     fld_nodes = node.getElementsByTagName ("field")
     fld_list = []
     cum_width = 0
-    cum_default = 0L
+    cum_default = 0
     if (len(fld_nodes) != 0):
         for fld in fld_nodes:
             wstr = fld.getAttribute ("width")
@@ -119,9 +119,9 @@ def create_register (rg, node):
             if default == '':
                 default = 0
             else:
-                default = long(reglib.number (default))
+                default = reglib.number (default)
             cum_default = cum_default | (default << cum_width)
-            print "Fld: %20s CD: %x CW: %d D: %x" % (fld.getAttribute("name"),cum_default, cum_width, default)
+            print("Fld: %20s CD: %x CW: %d D: %x" % (fld.getAttribute("name"),cum_default, cum_width, default))
             cum_width += width
 
         params['width'] = cum_width
@@ -157,7 +157,7 @@ def create_vh (rg):
     fname = rg.name + ".vh"
     fh = open (fname, 'w')
     for r in rg.registers:
-        fh.write ("`define %s 16'h%04x\n" % (string.upper(r.name), rg.base_addr+r.offset))
+        fh.write ("`define %s 16'h%04x\n" % (r.name.upper(), rg.base_addr+r.offset))
     fh.close()
 
 def create_map (rg):
@@ -165,7 +165,7 @@ def create_map (rg):
     fh = open (fname, 'w')
 
     for r in rg.registers:
-         fh.write ("#define %s 0x%x\n" % (string.upper(r.name),r.offset))
+         fh.write ("#define %s 0x%x\n" % (r.name.upper(),r.offset))
     
     #for r in rg.registers:
     #    fh.write ("sfr at 0x%02x %s;\n" % (r.offset, r.name))
@@ -173,7 +173,7 @@ def create_map (rg):
 
 def parse_file (filename):
     rdoc = xml.dom.minidom.parse (filename)
-    blk_list = rdoc.getElementsByTagName ("tv_registers")
+    blk_list = rdoc.getElementsByTagName ("registers")
 
     for blk in blk_list:
         create_verilog (blk)
@@ -187,13 +187,13 @@ def parse_file (filename):
 
 def check_version():
     version = float (sys.version[0:3])
-    if (version < 2.3):
-        print "rgen requires at least Python 2.3 to function correctly"
+    if (version < 3.5):
+        print("rgen requires at least Python 3.5 to function correctly")
         sys.exit (1)
 
 check_version()
 if (len (sys.argv) > 1):
     parse_file (sys.argv[1])
 else:
-    print "Usage: %s <filename>" % os.path.basename (sys.argv[0])
+    print("Usage: %s <filename>" % os.path.basename (sys.argv[0]))
 
