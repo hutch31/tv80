@@ -24,11 +24,14 @@ import string, math, re
 def log2 (num):
     return math.ceil (math.log (num) / math.log (2))
 
-# function that tries to interpret a number in Verilog notation
+# function that tries to interpret a number in C or Verilog notation
 def number (str):
+    _str = str.strip()
     try:
+        if _str[0:2] == "0x":
+            return int(_str[2:], 16)
         robj = re.compile ("(\d+)'([dhb])([\da-fA-F]+)")
-        mobj = robj.match (str)
+        mobj = robj.match (_str)
         if (mobj):
             if mobj.group(2) == 'h': radix = 16
             elif mobj.group(2) == 'b': radix = 2
@@ -277,7 +280,8 @@ class register_group:
             self.local_width = self.addr_size;
             rnum = 0
             for r in self.registers:
-                r.offset = rnum
+                if not r.offset:
+                    r.offset = rnum
                 rnum += 1
         self.build_load_mux()
         if (self.interrupts):
@@ -441,6 +445,9 @@ class register_group:
         else:
             print("Unknown register type",type)
 
+        if 'address' in params:
+            self.registers[-1].offset = params['address']
+
     def add (self, reg):
         self.registers.append (reg)
         #self.ports.extend (reg.io())
@@ -453,7 +460,7 @@ class register_group:
         
 class basic_register:
     def __init__ (self, name='', width=0):
-        self.offset = 0
+        self.offset = None
         self.width  = width
         self.name   = name
         self.interrupt = 0

@@ -25,7 +25,8 @@
 
 import reglib
 import xml.dom.minidom
-import sys, os, string
+import sys, os
+import argparse
 
 def node_info (node):
     print("Methods:",dir(node))
@@ -95,6 +96,9 @@ def create_register (rg, node):
     else : params['width'] = int(width)
     params['default'] = node.getAttribute ("default")
     params['int_value'] = node.getAttribute ("int_value")
+    address = node.getAttribute("address")
+    if (address != ''):
+        params['address'] = reglib.number(address)
 
     # May switch to this code later for a more general implementation
     #for anode in node.childNodes:
@@ -152,6 +156,22 @@ def create_verilog (top_node):
 
     create_map (rg)
     create_vh (rg)
+    return rg
+
+def create_vhdl_component(rg):
+    txt = "component {} is port (\n".format(rg.name)
+    portlist = []
+    for p in rg.ports:
+        if p.width == 1:
+            typ = "std_logic"
+        else:
+            typ = "std_logic_vector({} downto 0)".format(p.width-1)
+        portlist.append("{0} : {1} {2}".format(p.name, p.direction[:-3], typ))
+    txt += ';\n'.join(portlist) + '\n);\n'
+    txt += "end component;\n"
+
+    with open(rg.name + '.vhdc', 'w') as fh:
+        fh.write(txt)
 
 def create_vh (rg):
     fname = rg.name + ".vh"
@@ -171,12 +191,14 @@ def create_map (rg):
     #    fh.write ("sfr at 0x%02x %s;\n" % (r.offset, r.name))
     fh.close()
 
-def parse_file (filename):
+def parse_file (filename, args):
     rdoc = xml.dom.minidom.parse (filename)
     blk_list = rdoc.getElementsByTagName ("registers")
 
     for blk in blk_list:
-        create_verilog (blk)
+        rg = create_verilog (blk)
+        if (args.vhdl):
+            create_vhdl_component(rg)
     
     dec_list = rdoc.getElementsByTagName ("it_decoder")
 
@@ -191,9 +213,14 @@ def check_version():
         print("rgen requires at least Python 3.5 to function correctly")
         sys.exit (1)
 
-check_version()
-if (len (sys.argv) > 1):
-    parse_file (sys.argv[1])
-else:
-    print("Usage: %s <filename>" % os.path.basename (sys.argv[0]))
+if __name__ == "__main__":
+    check_version()
+    parser = argparse.ArgumentParser(description="Process register file(s)")
+    parser.add_argument('--vhdl', action='store_true', help="Generate VHDL component declarations")
+    parser.add_argument('filename', metavar='F', type=str, nargs='+', help="XML definition file")
+    args = parser.parse_args()
+
+    for f in args.filename:
+        print("Parsing file",f)
+        parse_file(f, args)
 
