@@ -48,7 +48,7 @@ class rgenTestSuite(unittest.TestCase):
         for r in range(10):
             f.add_register(rname="register_{}".format(r), type='config', width=r+2)
         f.dump()
-        parse_file(testfile)
+        parse_file(testfile, {})
         #os.unlink(testfile)
 
     def test_fields(self):
@@ -57,7 +57,7 @@ class rgenTestSuite(unittest.TestCase):
         flds = [Field(name="field{}".format(x), width=str(x), default=str(x)) for x in range(2,5)]
         f.add_register(rname="has_fields", type='config', fields=flds)
         f.dump()
-        parse_file(testfile)
+        parse_file(testfile, {})
         #os.unlink(testfile)
 
     def test_decode(self):
@@ -66,7 +66,7 @@ class rgenTestSuite(unittest.TestCase):
         for r in range(10):
             f.add_range(prefix='prefix{}'.format(r), base='16\'h{0:02x}00'.format(r), bits=8)
         f.dump()
-        parse_file(testfile)
+        parse_file(testfile, {})
 
 if __name__ == "__main__":
     unittest.main()
