@@ -155,16 +155,19 @@ main:
     cp  a, #0x9A            ; high byte
     jp  nz, test_fail
 
-    ; LD (nn),IX / LD IX,(nn)
+    ; LD (nn),IX / LD IX,(nn) – verify via PUSH IX / POP HL (avoids undocumented IXH/IXL)
     .db 0xDD, 0x21, 0x11, 0x22  ; LD IX,0x2211
     .db 0xDD, 0x22, 0x80, 0x80  ; LD (0x8080),IX
     .db 0xDD, 0x2A, 0x80, 0x80  ; LD IX,(0x8080)
-    .db 0xDD, 0x7D              ; LD A,IXL
-    cp  a, #0x11
-    jp  nz, test_fail
-    .db 0xDD, 0x7C              ; LD A,IXH
-    cp  a, #0x22
-    jp  nz, test_fail
+    ; Read IX back via PUSH IX / POP HL
+    .db 0xDD, 0xE5              ; PUSH IX
+    pop  hl
+    ld   a, h
+    cp   a, #0x22               ; IXH
+    jp   nz, test_fail
+    ld   a, l
+    cp   a, #0x11               ; IXL
+    jp   nz, test_fail
 
     ;========================================================
     ; LD-12: LD SP,HL / LD SP,IX / LD SP,IY

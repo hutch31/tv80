@@ -42,12 +42,10 @@ main:
     jp  nz, test_fail
     jp  c,  test_fail       ; C must be clear
 
-    ; RLCA does NOT change S,Z,P/V: verify Z stays set
-    xor a, a                ; Z=1 (A=0)
-    rlca                    ; 0x00 rlca = 0x00, Z should stay (A is 0x00 so Z still 1)
-    jp  nz, test_fail       ; Z was set and A=0x00 after rotate still 0x00? No: RLCA does NOT update S/Z/P
-    ; After RLCA A=0x00 and Z should remain from the previous XOR A.
-    ; In Z80, RLCA preserves Z (only updates C, H=0, N=0).
+    ; RLCA does NOT change S,Z,P/V: Z stays set from previous XOR A
+    xor a, a                ; A=0x00, Z=1
+    rlca                    ; A=0x00 → 0x00, C=0; Z unchanged (remains 1)
+    jp  nz, test_fail       ; Z should still be 1 → NZ false → no jump → OK
 
     ;========================================================
     ; ROT-01: RRCA (rotate right circular accumulator)

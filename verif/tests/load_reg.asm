@@ -241,13 +241,11 @@ main:
     ; LD I,A
     ld  a, #0x5A
     .db 0xED, 0x47          ; LD I,A
-    ; LD A,I (reads I back, updates flags: S/Z from I, H=0, N=0, P=IFF2)
+    ; LD A,I: I=0x5A (bit7=0) → S=0 (positive), Z=0
     .db 0xED, 0x57          ; LD A,I
     cp  a, #0x5A
     jp  nz, test_fail
-    jp  p,  test_fail       ; S must be set (0x5A = 0101_1010, bit7=0 → S=0)
-    ; Wait: 0x5A = 0101_1010 → bit7 = 0 → S must be CLEAR (positive)
-    ; So "jp p" means "jump if positive" = "jump if S=0". The test inverted.
+    jp  m,  test_fail       ; S must be CLEAR (0x5A bit7=0); jp m = jump if S=1 → fail
 
     ; Re-test LD A,I flags with a negative value
     ld  a, #0x80

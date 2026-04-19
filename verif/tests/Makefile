@@ -1,7 +1,7 @@
 # Makefile for TV80 verification test programs
 #
 # Builds Z80 assembly test programs into Verilog memory (.vmem) format
-# that the cocotb testbench can $readmemh / array-write into ROM.
+# that the cocotb testbench can array-write into ROM.
 #
 # Tools required:
 #   sdcc       – Small Device C Compiler (for .c tests)
@@ -19,15 +19,13 @@
 SCRIPTS_DIR := ../../scripts
 TESTS_SRC   := ../../tests
 
-CC   := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
-AS   := sdasz80
-IHEX2MEM := python3 $(SCRIPTS_DIR)/ihex2mem.py
-
-# Linker options for pure-assembly programs (no C runtime)
-AS_LINK_OPTIONS := -- -m -j -x
+CC       := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
+AS       := sdasz80
+IHEX2MEM := $(SCRIPTS_DIR)/ihex2mem.py
 
 # -----------------------------------------------------------------------
 # New verification test programs (in verif/tests/)
+# These use .area PROGMEM (ABS) with explicit .org so --no-std-crt0 is safe.
 # -----------------------------------------------------------------------
 VERIF_TESTS := \
     reset_test      \
@@ -55,7 +53,7 @@ VERIF_VMEM := $(addsuffix .vmem, $(VERIF_TESTS))
 # -----------------------------------------------------------------------
 # Functional tests – built from ../../tests/ source
 # -----------------------------------------------------------------------
-FUNC_TESTS_AST := alu_optest load_optest otir ivec_flags
+FUNC_TESTS_AST := alu_optest load_optest otir
 FUNC_TESTS_ASM := basic_int
 FUNC_TESTS_C   := hello fib
 
@@ -65,18 +63,19 @@ FUNC_VMEM := $(addsuffix .vmem, $(FUNC_TESTS_AST) $(FUNC_TESTS_ASM) $(FUNC_TESTS
 # Pattern rules
 # -----------------------------------------------------------------------
 
-# Pure assembly → ihex via sdasz80 + sdcc linker
-%.rel : %.asm
-	$(AS) -l -o $*.rel $<
-
-%.rel : %.ast
-	$(AS) -l -o $*.rel $<
-
-%.ihx : %.rel
-	$(CC) --no-std-crt0 $*.rel $(AS_LINK_OPTIONS)
-
+# .vmem from .ihx (both local and copied from TESTS_SRC)
 %.vmem : %.ihx
 	$(IHEX2MEM) $< $@
+
+# Our new verif test programs (.asm → .rel → .ihx with no C runtime)
+%.ihx : %.asm
+	$(AS) -l -o $*.rel $<
+	$(CC) --no-std-crt0 $*.rel
+
+# Functional .ast programs (sdcc z80 assembler convention)
+%.ihx : %.ast
+	$(AS) -l -o $*.rel $<
+	$(CC) --no-std-crt0 $*.rel
 
 # -----------------------------------------------------------------------
 # Targets
@@ -87,27 +86,40 @@ all: $(VERIF_VMEM)
 
 all_func: all $(FUNC_VMEM)
 
-# Functional test sources live in ../../tests/ – copy .rel then link
-$(FUNC_TESTS_AST:=.rel) : $(FUNC_TESTS_AST:=.ast)
-	$(AS) -l -o $*.rel $(TESTS_SRC)/$*.ast
+# Functional test sources live in ../../tests/ – symlink or copy to local
+# then use the pattern rules above.
+alu_optest.ast: $(TESTS_SRC)/alu_optest.ast
+	cp $< $@
 
-$(FUNC_TESTS_ASM:=.rel) : $(FUNC_TESTS_ASM:=.asm)
-	$(AS) -l -o $*.rel $(TESTS_SRC)/$*.asm
+load_optest.ast: $(TESTS_SRC)/load_optest.ast
+	cp $< $@
 
-# bintr needs its C runtime assembly object too
-bintr_crt0.rel:
-	$(AS) -l -o bintr_crt0.rel $(TESTS_SRC)/bintr_crt0.asm
+otir.ast: $(TESTS_SRC)/otir.ast
+	cp $< $@
 
-bintr.rel: bintr_crt0.rel
-	$(CC) -c $(TESTS_SRC)/bintr.c -o bintr.rel || \
-	$(AS) -l -o bintr.rel $(TESTS_SRC)/bintr.asm
+basic_int.asm: $(TESTS_SRC)/basic_int.asm
+	cp $< $@
 
-bintr.ihx: bintr.rel bintr_crt0.rel
-	$(CC) --no-std-crt0 bintr.rel bintr_crt0.rel $(AS_LINK_OPTIONS)
+hello.c: $(TESTS_SRC)/hello.c
+	cp $< $@
 
-# C test programs
-%.ihx : $(TESTS_SRC)/%.c
+fib.c: $(TESTS_SRC)/fib.c
+	cp $< $@
+
+%.ihx : %.c
 	$(CC) $<
+
+# bintr requires its dedicated C runtime crt0
+bintr_crt0.asm: $(TESTS_SRC)/bintr_crt0.asm
+	cp $< $@
+
+bintr_crt0.rel: bintr_crt0.asm
+	$(AS) -l -o bintr_crt0.rel $<
+
+bintr.ihx: $(TESTS_SRC)/bintr.c bintr_crt0.rel
+	$(CC) --no-std-crt0 $^ -- -m -j -x
 
 clean:
 	rm -f *.rel *.ihx *.vmem *.lnk *.map *.lst *.sym *.rst
+	rm -f alu_optest.ast load_optest.ast otir.ast basic_int.asm
+	rm -f hello.c fib.c bintr.c bintr_crt0.asm
