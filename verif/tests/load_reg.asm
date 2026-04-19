@@ -256,17 +256,15 @@ main:
     jp  p,  test_fail       ; S must be set (0x80 is negative)
 
     ; LD R,A / LD A,R (R is the refresh register; value increments but
-    ;   we verify that at least loading 0x00 and reading back gives ~0x00+n)
+    ;   R increments on every M1 cycle so after LD R,A(0) and LD A,R
+    ;   R will be ~2 (two M1 cycles elapsed). The exact value is
+    ;   implementation-dependent and may wrap, so we accept any value.
     ld  a, #0x00
-    .db 0xED, 0x4F          ; LD R,A
-    .db 0xED, 0x5F          ; LD A,R
-    ; R increments on every M1 cycle; just verify it's nonzero or near 0
-    ; Since we just loaded 0 and the LD A,R itself took 2 M1 cycles, R~2
-    ; Exact value is not predictable but should be nonzero:
-    jp  z,  r_was_zero
-    jp  r_ok
-r_was_zero:
-    ; R could legitimately be 0x00 after wrapping; this is not a failure
+    .db 0xED, 0x4F          ; LD R,A  (R = 0)
+    .db 0xED, 0x5F          ; LD A,R  (A = R, which has incremented)
+    ; Accept any value (wrapping to 0 is also valid); just verify instruction ran
+    ; by checking Z flag: if A=0 then Z=1, if A!=0 then Z=0. Both are OK.
+    jp  r_ok                ; always continue
 r_ok:
     ; LD A,I with I=0x00 → A=0x00, Z=1
     ld  a, #0x00

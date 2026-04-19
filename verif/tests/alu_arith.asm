@@ -79,7 +79,7 @@ main:
     pop  bc                 ; C = F register
     ld   a, c
     and  a, #FLAG_PV
-    jp   z, test_fail       ; P/V must be set (overflow)
+    jp   z, test_fail       ; overflow flag (P/V, bit2) must be 1
 
     ; 0x80 + 0x80 = 0x00, C=1, V=1 (overflow: neg+neg=pos), Z=1
     ld  a, #0x80

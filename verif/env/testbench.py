@@ -51,7 +51,7 @@ RANDVAL          = 0x94
 NMI_CNTDWN       = 0x95
 NMI_TRIG_OPCODE  = 0xA0
 
-# Default test timeout in clock cycles (10 ns clock → 10 000 cycles = 100 µs)
+# Default test timeout in clock cycles (10 ns clock → 500 000 cycles = 5 ms)
 DEFAULT_TIMEOUT = 500_000
 
 # Directory containing compiled .vmem test programs

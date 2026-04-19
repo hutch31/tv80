@@ -46,8 +46,9 @@ nmi_handler:
     push hl
     ld  hl, #NMI_COUNT
     inc (hl)                ; NMI-01: increment NMI counter
-    ; Check if we were in HALT (halt_n goes high before NMI jump)
-    ; We can detect HALT exit by checking if halt flag was set
+    ; Detect NMI-03: CPU was in HALT (halt_n was low=0/asserted; transitions
+    ; high=1/deasserted when NMI is taken).  We detect this indirectly by
+    ; checking the sentinel value pre-written to HALT_FLAG before the HALT.
     ld  hl, #HALT_FLAG
     ; (HALT_FLAG was pre-set to 0xAA by main before halting)
     ld  a, (hl)

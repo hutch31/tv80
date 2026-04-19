@@ -66,7 +66,8 @@ module tb_top (
     assign io_cs   = !iorq_n & !rd_n;
 
     // int_ack: asserted during INT-acknowledge cycles (m1_n=0, iorq_n=0)
-    // rd_n is NOT asserted during INT-ack (distinguishes it from instruction fetch)
+    // rd_n remains high (=1, inactive) during INT-ack, distinguishing it
+    // from a normal instruction fetch where both m1_n and mreq_n are low.
     assign int_ack = !m1_n & !iorq_n;
 
     // -----------------------------------------------------------------------
