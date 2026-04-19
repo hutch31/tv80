@@ -39,7 +39,7 @@
 void swap_bytes(uint8_t *a, uint8_t *b)
 {
   /*
-  _asm
+  __asm
     ld    d,4(ix)
     ld    e,5(ix)
     ld    h,6(ix)
@@ -49,7 +49,7 @@ void swap_bytes(uint8_t *a, uint8_t *b)
     ld    a, (hl)
     ld    (de), a
     ld    (hl), b
-  _endasm;
+  __endasm;
   */
 	uint8_t temp;
 
@@ -69,7 +69,7 @@ void rc4_init(struct rc4_state *const state, const uint8_t *key, int keylen)
 
 	/* Initialize state with identity permutation */
 #ifndef ORIGINAL_C
-    _asm
+    __asm
     ld    d, 4(ix)
     ld    e, 5(ix)
     ld    b, #255
@@ -88,7 +88,7 @@ state_init:
     ld    (hl), #0
     inc   hl
     ld    (hl), #0
-    _endasm;
+    __endasm;
 #else
 	for (i = 0; i < 256; i++)
 		state->perm[i] = (uint8_t)i; 
