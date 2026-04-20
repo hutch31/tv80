@@ -35,10 +35,10 @@ main:
     ; 0xFF AND 0x0F = 0x0F, H=1, N=0, C=0, P=even parity
     ld  a, #0xFF
     and a, #0x0F
+    push af                     ; save AND flags (H=1, N=0, C=0) before cp changes them
     cp  a, #0x0F
     jp  nz, test_fail
     jp  c,  test_fail           ; C must be clear
-    push af
     pop  bc
     ld   a, c
     and  a, #FLAG_H
@@ -70,10 +70,10 @@ main:
     ; 0x0F OR 0xF0 = 0xFF, H=0, N=0, C=0, S=1
     ld  a, #0x0F
     or  a, #0xF0
+    jp  p,  test_fail           ; S from OR: 0xFF is negative (S=1) → p=false → not taken
+    push af                     ; save OR flags (H=0, N=0, S=1) before cp changes them
     cp  a, #0xFF
     jp  nz, test_fail
-    jp  p,  test_fail           ; S must be set (0xFF is negative)
-    push af
     pop  bc
     ld   a, c
     and  a, #FLAG_H
@@ -130,9 +130,9 @@ main:
     ;========================================================
     ld  a, #0x55
     cpl
+    push af                     ; save CPL flags (H=1, N=1) before cp changes them
     cp  a, #0xAA
     jp  nz, test_fail
-    push af
     pop  bc
     ld   a, c
     and  a, #FLAG_H
@@ -142,10 +142,8 @@ main:
     jp   z, test_fail           ; N must be set
 
     ld  a, #0xFF
-    cpl
-    jp  nz, test_fail           ; 0xFF → 0x00, Z=1 (set by CPL itself? No–CPL does NOT touch S/Z)
-    ; Actually CPL sets H and N but leaves S and Z unchanged.
-    ; Let's verify A=0x00 by CP:
+    cpl                         ; A=0x00; CPL sets H and N but leaves S and Z unchanged
+    ; Verify A=0x00 by CP:
     cp  a, #0x00
     jp  nz, test_fail
 

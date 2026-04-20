@@ -57,9 +57,9 @@ main:
     or  a, a                ; A=0x00, Z=1, C=0
     ; Swap back
     ex  af, af'             ; restore: A=0x42, C=1
+    jp  nc, test_fail       ; C must be restored (check before cp clobbers it)
     cp  a, #0x42
     jp  nz, test_fail
-    jp  nc, test_fail       ; C must be restored
 
     ; Double swap (should be identity again)
     ld  a, #0xAA

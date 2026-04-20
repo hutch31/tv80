@@ -97,8 +97,8 @@ jp_target:
     ; JMP-02: JP cc,nn – all 8 conditions
     ;========================================================
     ; NZ: Z=0 → jump taken
-    xor a, a                ; Z=1
-    ld  a, #0x01            ; Z=0
+    ld  a, #0x01            ; A=0x01
+    or  a, a                ; Z=0 (non-zero result; OR also clears C)
     jp  z,  test_fail       ; must NOT jump (Z=0, Z condition fails)
     jp  nz, jp_nz_ok        ; must jump
     jp  test_fail

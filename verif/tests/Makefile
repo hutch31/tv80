@@ -21,6 +21,7 @@ TESTS_SRC   := ../../tests
 
 CC       := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
 AS       := sdasz80
+LD       := sdldz80
 IHEX2MEM := $(SCRIPTS_DIR)/ihex2mem.py
 
 # -----------------------------------------------------------------------
@@ -70,12 +71,12 @@ FUNC_VMEM := $(addsuffix .vmem, $(FUNC_TESTS_AST) $(FUNC_TESTS_ASM) $(FUNC_TESTS
 # Our new verif test programs (.asm → .rel → .ihx with no C runtime)
 %.ihx : %.asm
 	$(AS) -l -o $*.rel $<
-	$(CC) --no-std-crt0 $*.rel
+	$(LD) -n -i -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
 
 # Functional .ast programs (sdcc z80 assembler convention)
 %.ihx : %.ast
 	$(AS) -l -o $*.rel $<
-	$(CC) --no-std-crt0 $*.rel
+	$(LD) -n -i -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
 
 # -----------------------------------------------------------------------
 # Targets

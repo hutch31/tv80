@@ -53,6 +53,10 @@ NMI_TRIG_OPCODE  = 0xA0
 
 # Default test timeout in clock cycles (10 ns clock → 500 000 cycles = 5 ms)
 DEFAULT_TIMEOUT = 500_000
+_NS_PER_CYCLE   = 10
+# Cocotb-level timeout (ns) applied to @cocotb.test decorators.
+# Slightly larger than DEFAULT_TIMEOUT so the io_model timeout fires first.
+_STD_TIMEOUT_NS = (DEFAULT_TIMEOUT + 50_000) * _NS_PER_CYCLE  # 5.5 ms
 
 # Directory containing compiled .vmem test programs
 TESTS_DIR = os.environ.get(
@@ -330,7 +334,7 @@ async def run_vmem_test(dut, vmem_name, timeout=DEFAULT_TIMEOUT,
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def rst_01_reset_basic(dut):
     """RST-01: After reset deassert, first M1 fetch must be from address 0x0000."""
     # Infinite NOP loop: NOP at 0x0000, JR -2 at 0x0001
@@ -361,11 +365,11 @@ async def rst_01_reset_basic(dut):
         raise TestFailure("RST-01: no M1 cycle detected after reset")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def rst_02_reset_reapply(dut):
     """RST-02: Reapplying reset mid-execution must restart PC from 0x0000."""
     # Simple program that counts in B register, cycles 100+ times before we
-    # re-apply reset – verifying no stale state survives.
+    # re-apply reset - verifying no stale state survives.
     # INC B at 0x000; JR -2 at 0x001 → infinite increment loop
     program = [0x04, 0x18, 0xFE]  # INC B, JR -2
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
@@ -402,7 +406,7 @@ async def rst_02_reset_reapply(dut):
         raise TestFailure("RST-02: no M1 cycle after second reset")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def rst_03_reset_signals(dut):
     """RST-03: All bus-control outputs must be deasserted (=1) during reset."""
     nop_loop = [0x00, 0x18, 0xFE]
@@ -429,29 +433,29 @@ async def rst_03_reset_signals(dut):
 
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
-# ║       4.2 – 4.4  ALU (arithmetic, logic, rotate)         ║
+# ║       4.2 - 4.4  ALU (arithmetic, logic, rotate)         ║
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def alu_01_to_11_arithmetic(dut):
     """ALU-01..11: Arithmetic instructions (ADD/ADC/SUB/SBC/INC/DEC/DAA/CP/NEG)."""
     await run_vmem_test(dut, "alu_arith")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def alu_05_to_07_arith16(dut):
     """ALU-05..07,09: 16-bit arithmetic (ADD HL/ADC HL/SBC HL/INC-DEC rr)."""
     await run_vmem_test(dut, "alu_arith16")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def log_01_to_07_logic(dut):
     """LOG-01..07: Logic instructions (AND/OR/XOR/CPL/CCF/SCF/NEG)."""
     await run_vmem_test(dut, "alu_logic")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def rot_01_to_05_rotate(dut):
     """ROT-01..05: Rotate and shift instructions."""
     await run_vmem_test(dut, "alu_rotate")
@@ -459,11 +463,11 @@ async def rot_01_to_05_rotate(dut):
 
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
-# ║              4.5  ALU – Bit Operations                    ║
+# ║              4.5  ALU - Bit Operations                    ║
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def bit_01_to_03_bit_ops(dut):
     """BIT-01..03: BIT, SET, RES instructions."""
     await run_vmem_test(dut, "bit_ops")
@@ -475,13 +479,13 @@ async def bit_01_to_03_bit_ops(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def ld_01_to_06_load_reg(dut):
     """LD-01..06: Register-to-register, immediate, and indexed (IX/IY) loads."""
     await run_vmem_test(dut, "load_reg")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def ld_07_to_14_load_mem(dut):
     """LD-07..14: Memory indirect loads, 16-bit loads, block transfers."""
     await run_vmem_test(dut, "load_mem")
@@ -493,7 +497,7 @@ async def ld_07_to_14_load_mem(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def jmp_01_to_08_jumps(dut):
     """JMP-01..08: All jump, call, return, DJNZ, and RST instructions."""
     await run_vmem_test(dut, "jump_ops")
@@ -505,7 +509,7 @@ async def jmp_01_to_08_jumps(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def io_01_to_03_io_ops(dut):
     """IO-01..03: IN, OUT, and block I/O instructions."""
     await run_vmem_test(dut, "io_ops")
@@ -517,7 +521,7 @@ async def io_01_to_03_io_ops(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def stk_01_02_stack(dut):
     """STK-01..02: PUSH/POP (AF,BC,DE,HL,IX,IY) and EX (SP),rr."""
     await run_vmem_test(dut, "stack_ops")
@@ -529,7 +533,7 @@ async def stk_01_02_stack(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def exc_01_to_03_exchange(dut):
     """EXC-01..03: EX AF,AF' / EXX / EX DE,HL."""
     await run_vmem_test(dut, "exchange_ops")
@@ -541,7 +545,7 @@ async def exc_01_to_03_exchange(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def misc_01_to_03_misc(dut):
     """MISC-01..03: NOP, HALT (with INT exit), DI/EI."""
     await run_vmem_test(dut, "misc_ops")
@@ -549,37 +553,37 @@ async def misc_01_to_03_misc(dut):
 
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
-# ║      4.12  Interrupt Handling – Maskable (INT)            ║
+# ║      4.12  Interrupt Handling - Maskable (INT)            ║
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def int_01_mode0(dut):
-    """INT-01: IM 0 – CPU fetches RST 38H from data bus during INT-ack."""
+    """INT-01: IM 0 - CPU fetches RST 38H from data bus during INT-ack."""
     # int_ack_byte=0xFF → RST 38H → CPU jumps to 0x0038
     await run_vmem_test(dut, "interrupt_im0", int_ack_byte=0xFF)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def int_02_mode1(dut):
     """INT-02..06: IM 1, nested interrupts, EI delay, RETI."""
     await run_vmem_test(dut, "interrupt_im1")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def int_03_mode2(dut):
-    """INT-03: IM 2 – vector table interrupt."""
+    """INT-03: IM 2 - vector table interrupt."""
     # int_ack_byte provides the low byte of the ISR address (vector table index)
     await run_vmem_test(dut, "interrupt_im2", int_ack_byte=0x00)
 
 
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
-# ║      4.13  Interrupt Handling – Non-Maskable (NMI)        ║
+# ║      4.13  Interrupt Handling - Non-Maskable (NMI)        ║
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def nmi_01_to_05_nmi(dut):
     """NMI-01..05: NMI basic, RETN, NMI during HALT, priority, opcode trigger."""
     await run_vmem_test(dut, "nmi_ops")
@@ -591,7 +595,7 @@ async def nmi_01_to_05_nmi(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def bus_01_busrq_basic(dut):
     """BUS-01: Assert busrq_n; verify busak_n asserts within a few cycles."""
     # Infinite NOP loop; cocotb asserts bus request externally
@@ -618,7 +622,7 @@ async def bus_01_busrq_basic(dut):
     assert acked, "BUS-01: busak_n did not assert within 20 cycles of busrq_n"
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def bus_02_busrq_release(dut):
     """BUS-02: Release busrq_n; CPU resumes execution (new M1 cycles detected)."""
     nop_loop = [0x00, 0x18, 0xFE]
@@ -657,7 +661,7 @@ async def bus_02_busrq_release(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def wait_01_memory_wait(dut):
     """WAIT-01: Assert wait_n=0 during a memory read; CPU holds T-state."""
     nop_loop = [0x00, 0x18, 0xFE]
@@ -692,7 +696,7 @@ async def wait_01_memory_wait(dut):
     assert m1_seen, "WAIT-01: no M1 after wait-state insertion"
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def wait_02_io_wait(dut):
     """WAIT-02: Assert wait_n=0 during an I/O cycle."""
     # Program: repeatedly read from INC_ON_READ port then write PASS
@@ -734,9 +738,9 @@ async def wait_02_io_wait(dut):
 # ╚═══════════════════════════════════════════════════════════╝
 # ===========================================================================
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def func_01_hello_world(dut):
-    """FUNC-01: Run tests/hello.c – verify 'Hello, world!' via MSG_PORT."""
+    """FUNC-01: Run tests/hello.c - verify 'Hello, world!' via MSG_PORT."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_vmem("hello")
@@ -748,37 +752,37 @@ async def func_01_hello_world(dut):
     assert "Hello" in output or True, "FUNC-01: 'Hello' not found in MSG output"
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=21_000_000, timeout_unit="ns")
 async def func_02_fibonacci(dut):
-    """FUNC-02: Run tests/fib.c – verify Fibonacci numbers 1–19."""
+    """FUNC-02: Run tests/fib.c - verify Fibonacci numbers 1-19."""
     await run_vmem_test(dut, "fib", timeout=2_000_000, max_timeout=1_500_000)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def func_03_basic_interrupt(dut):
-    """FUNC-03: Run tests/basic_int.asm – interrupt fires and is acknowledged."""
+    """FUNC-03: Run tests/basic_int.asm - interrupt fires and is acknowledged."""
     await run_vmem_test(dut, "basic_int")
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=21_000_000, timeout_unit="ns")
 async def func_04_bintr(dut):
-    """FUNC-04: Run tests/bintr.asm – alternating INT and NMI phases."""
+    """FUNC-04: Run tests/bintr.asm - alternating INT and NMI phases."""
     await run_vmem_test(dut, "bintr", timeout=2_000_000, max_timeout=1_500_000)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=51_000_000, timeout_unit="ns")
 async def func_05_alu_optest(dut):
-    """FUNC-05: Run tests/alu_optest.ast – comprehensive ALU self-test."""
+    """FUNC-05: Run tests/alu_optest.ast - comprehensive ALU self-test."""
     await run_vmem_test(dut, "alu_optest", timeout=5_000_000, max_timeout=4_000_000)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=21_000_000, timeout_unit="ns")
 async def func_06_load_optest(dut):
-    """FUNC-06: Run tests/load_optest.ast – comprehensive load self-test."""
+    """FUNC-06: Run tests/load_optest.ast - comprehensive load self-test."""
     await run_vmem_test(dut, "load_optest", timeout=2_000_000, max_timeout=1_500_000)
 
 
-@cocotb.test()
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def func_07_otir_test(dut):
-    """FUNC-07: Run tests/otir.ast – OTIR block output instruction."""
+    """FUNC-07: Run tests/otir.ast - OTIR block output instruction."""
     await run_vmem_test(dut, "otir")

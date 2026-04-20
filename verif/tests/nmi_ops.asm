@@ -116,7 +116,8 @@ nmi02_done:
     ;========================================================
     ; NMI-03: NMI during HALT
     ;========================================================
-    ld  (HALT_FLAG), #0xAA  ; sentinel so NMI handler knows we were halting
+    ld  a, #0xAA
+    ld  (HALT_FLAG), a      ; sentinel so NMI handler knows we were halting
 
     ; Schedule NMI while in HALT
     ld  a, #4
@@ -162,19 +163,19 @@ nmi04_done:
     ;========================================================
     ; NMI-05: NMI opcode trigger via NMI_TRIG_OPCODE port
     ;========================================================
-    ; Set trigger opcode = 0x00 (NOP): NMI fires when IR = NOP
+    ; Set trigger opcode = 0x3C (INC A): NMI fires when IR = INC A
     di                      ; mask INT while setting up
-    ld  a, #0x00
-    out (_nmi_trig_opcode), a   ; trigger on NOP opcode
+    ld  a, #0x3C
+    out (_nmi_trig_opcode), a   ; trigger on INC A opcode
 
     ; Clear NMI_CNTDWN so it doesn't interfere
     ld  a, #0x00
     out (_nmi_cntdwn), a
 
-    ; Enable and execute NOPs – NMI should fire on one of them
+    ; Enable and execute one INC A – NMI should fire on it
     ei
-    nop                     ; IR = 0x00 → NMI triggered by cocotb
-    nop
+    inc a                   ; IR = 0x3C -> NMI triggered by cocotb
+    nop                     ; remaining instructions don't match trigger
     nop
     nop
     nop

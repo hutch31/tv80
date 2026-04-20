@@ -251,9 +251,9 @@ main:
     ld  a, #0x80
     .db 0xED, 0x47          ; LD I,A
     .db 0xED, 0x57          ; LD A,I
+    jp  p,  test_fail       ; S must be set (0x80 is negative; check before cp)
     cp  a, #0x80
     jp  nz, test_fail
-    jp  p,  test_fail       ; S must be set (0x80 is negative)
 
     ; LD R,A / LD A,R (R is the refresh register; value increments but
     ;   R increments on every M1 cycle so after LD R,A(0) and LD A,R

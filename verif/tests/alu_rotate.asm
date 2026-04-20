@@ -31,9 +31,9 @@ main:
     ; 0x80 → 0x01, C=1 (bit7 goes to C and bit0)
     ld  a, #0x80
     rlca
+    jp  nc, test_fail       ; C must be set (check before cp clobbers it)
     cp  a, #0x01
     jp  nz, test_fail
-    jp  nc, test_fail       ; C must be set
 
     ; 0x01 → 0x02, C=0
     ld  a, #0x01
@@ -53,9 +53,9 @@ main:
     ; 0x01 → 0x80, C=1
     ld  a, #0x01
     rrca
+    jp  nc, test_fail       ; C must be set (check before cp clobbers it)
     cp  a, #0x80
     jp  nz, test_fail
-    jp  nc, test_fail       ; C must be set
 
     ; 0x80 → 0x40, C=0
     ld  a, #0x80
@@ -71,9 +71,9 @@ main:
     ld  a, #0x80
     or  a, a                ; clear carry
     rla
+    jp  nc, test_fail       ; C must be set (bit7=1 rotated out; check before cp)
     cp  a, #0x00
     jp  nz, test_fail
-    jp  nc, test_fail       ; C must be set (got bit7=1)
 
     ; C=1, A=0x00: A = 0x01 (old carry into bit0), new C=0
     ld  a, #0x80
@@ -95,9 +95,9 @@ main:
     ld  a, #0xFF
     or  a, a                ; C=0
     rla                     ; C=0 in, bit7=1 → C=1 out, A=0xFE+0=0xFE
+    jp  nc, test_fail       ; C must be set (check before cp clobbers it)
     cp  a, #0xFE
     jp  nz, test_fail
-    jp  nc, test_fail       ; C must be set
 
     ;========================================================
     ; ROT-02: RRA (rotate right through carry)
@@ -106,9 +106,9 @@ main:
     ld  a, #0x01
     or  a, a                ; C=0
     rra
+    jp  nc, test_fail       ; C=1 (bit0 rotated out; check before cp)
     cp  a, #0x00
     jp  nz, test_fail
-    jp  nc, test_fail       ; C=1
 
     ; C=1, A=0x00: A → 0x80 (old C into bit7), C=0
     rra                     ; C was 1 from previous
@@ -122,16 +122,16 @@ main:
     ; RLC A (CB 07): 0x80 → 0x01, C=1
     ld  a, #0x80
     .db 0xCB, 0x07          ; RLC A
+    jp  nc, test_fail       ; C must be set (check before cp)
     cp  a, #0x01
     jp  nz, test_fail
-    jp  nc, test_fail
 
     ; RRC A (CB 0F): 0x01 → 0x80, C=1
     ld  a, #0x01
     .db 0xCB, 0x0F          ; RRC A
+    jp  nc, test_fail       ; C must be set (check before cp)
     cp  a, #0x80
     jp  nz, test_fail
-    jp  nc, test_fail
 
     ; RL A (CB 17): C=0, A=0x80 → A=0x00, C=1
     ld  a, #0x80
@@ -149,9 +149,9 @@ main:
     ; SLA A (CB 27): 0x81 → 0x02, C=1 (shifts 0 into bit0)
     ld  a, #0x81
     .db 0xCB, 0x27          ; SLA A
+    jp  nc, test_fail       ; C=1 (bit7 was 1; check before cp)
     cp  a, #0x02
     jp  nz, test_fail
-    jp  nc, test_fail       ; C=1 (bit7 was 1)
 
     ; SRA A (CB 2F): arithmetic shift right, sign bit preserved
     ; 0x80 → 0xC0, C=0 (bit0 was 0)
@@ -165,9 +165,9 @@ main:
     ; 0x81 → 0x40, C=1
     ld  a, #0x81
     .db 0xCB, 0x3F          ; SRL A
+    jp  nc, test_fail       ; C=1 (bit0 was 1; check before cp)
     cp  a, #0x40
     jp  nz, test_fail
-    jp  nc, test_fail       ; C=1
 
     ; RLC B (CB 00): 0x80 → 0x01, C=1
     ld  b, #0x80
@@ -187,9 +187,9 @@ main:
     ld  d, #0xFF
     .db 0xCB, 0x3A          ; SRL D
     ld  a, d
+    jp  nc, test_fail       ; C=1 (bit0 was 1; check before cp)
     cp  a, #0x7F
     jp  nz, test_fail
-    jp  nc, test_fail
 
     ;========================================================
     ; ROT-05: CB rotate on (HL)
@@ -199,9 +199,9 @@ main:
     ld  (hl), #0x80
     .db 0xCB, 0x06          ; RLC (HL)
     ld  a, (hl)
+    jp  nc, test_fail       ; C=1 (bit7 was 1; check before cp)
     cp  a, #0x01
     jp  nz, test_fail
-    jp  nc, test_fail
 
     ; SRL (HL): (HL)=0x01 → 0x00, C=1, Z=1
     .db 0xCB, 0x3E          ; SRL (HL)

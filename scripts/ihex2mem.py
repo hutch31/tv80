@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Intel Hex to Verilog Memory format converter
 #
@@ -57,7 +57,7 @@ class mem_image:
 
         ofh = open (outfile, 'w')
         for addr in range(start, stop+1):
-            if self.map.has_key (addr):
+            if addr in self.map:
                 ofh.write ("@%02x %02x\n" % (addr, self.map[addr]))
         ofh.close()
 
@@ -95,7 +95,7 @@ def cmdline ():
     conv = mem_image()
     conv.load_ihex(infile)
     conv.save_vmem(outfile)
-    print "Converted %d bytes from %s to %s" % (conv.bcount, infile, outfile)
+    print("Converted %d bytes from %s to %s" % (conv.bcount, infile, outfile))
     
 if __name__ == '__main__':
     cmdline()

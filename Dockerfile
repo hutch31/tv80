@@ -55,7 +55,7 @@ RUN git clone https://github.com/verilator/verilator.git && \
     cd .. && \
     rm -rf verilator
 
-RUN apt-get update && apt-install -y sdcc iverilog
+RUN apt-get update && apt-get install -y sdcc iverilog
 
 # Set the working directory
 WORKDIR /app

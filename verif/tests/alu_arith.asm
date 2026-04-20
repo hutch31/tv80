@@ -180,9 +180,9 @@ main:
     ; 0x00 - 0x01 = 0xFF, C=1 (borrow)
     ld  a, #0x00
     sub a, #0x01
+    jp  nc, test_fail       ; C (borrow) must be set (check before call check_a clobbers via cp)
     ld  b, #0xFF
     call check_a
-    jp  nc, test_fail       ; C (borrow) must be set
 
     ; 0x80 - 0x01 = 0x7F → overflow (neg-pos=pos), V=1
     ld  a, #0x80
@@ -308,9 +308,9 @@ main:
     ;========================================================
     ld  a, #0x01
     .db 0xED, 0x44          ; NEG
+    jp  nc, test_fail       ; borrow from 0, C=1 (check before call check_a clobbers via cp)
     ld  b, #0xFF
     call check_a
-    jp  nc, test_fail       ; borrow from 0, C=1
     push af
     pop  bc
     ld   a, c
