@@ -1,0 +1,138 @@
+# Makefile for TV80 verification test programs
+#
+# Builds Z80 assembly test programs into Verilog memory (.vmem) format
+# that the cocotb testbench can array-write into ROM.
+#
+# Tools required:
+#   sdcc       – Small Device C Compiler (for .c tests)
+#   sdasz80    – SDCC Z80 assembler (for .asm / .ast tests)
+#   ihex2mem.py – Intel HEX to Verilog memory converter (in ../../scripts/)
+#
+# Install on Debian/Ubuntu:
+#   apt-get install sdcc
+#
+# Usage:
+#   make          – build all new test programs
+#   make all_func – also build functional tests from ../../tests/
+#   make clean    – remove generated files
+
+SCRIPTS_DIR := ../../scripts
+TESTS_SRC   := ../../tests
+
+CC       := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
+AS       := sdasz80
+LD       := sdldz80
+IHEX2MEM := $(SCRIPTS_DIR)/ihex2mem.py
+
+# -----------------------------------------------------------------------
+# New verification test programs (in verif/tests/)
+# These use .area PROGMEM (ABS) with explicit .org so --no-std-crt0 is safe.
+# -----------------------------------------------------------------------
+VERIF_TESTS := \
+    reset_test      \
+    alu_arith       \
+    alu_arith16     \
+    alu_logic       \
+    alu_rotate      \
+    bit_ops         \
+    load_reg        \
+    load_mem        \
+    jump_ops        \
+    io_ops          \
+    stack_ops       \
+    exchange_ops    \
+    misc_ops        \
+    interrupt_im0   \
+    interrupt_im1   \
+    interrupt_im2   \
+    nmi_ops         \
+    busrq_test      \
+    wait_test
+
+VERIF_VMEM := $(addsuffix .vmem, $(VERIF_TESTS))
+
+# -----------------------------------------------------------------------
+# Functional tests – built from ../../tests/ source
+# -----------------------------------------------------------------------
+FUNC_TESTS_AST := alu_optest load_optest otir
+FUNC_TESTS_ASM := basic_int
+FUNC_TESTS_C   := hello fib
+
+FUNC_VMEM := $(addsuffix .vmem, $(FUNC_TESTS_AST) $(FUNC_TESTS_ASM) $(FUNC_TESTS_C) bintr)
+
+# -----------------------------------------------------------------------
+# Pattern rules
+# -----------------------------------------------------------------------
+
+# .vmem from .ihx (both local and copied from TESTS_SRC)
+%.vmem : %.ihx
+	$(IHEX2MEM) $< $@
+
+# Our new verif test programs (.asm → .rel → .ihx with no C runtime)
+%.ihx : %.asm
+	$(AS) -l -o $*.rel $<
+	$(LD) -n -i -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
+
+# Functional .ast programs (sdcc z80 assembler convention).
+# _CODE must be placed after the ABS INIT area (which ends ~0x00FF).
+# Without an explicit base, sdldz80 defaults _CODE to 0x0000, overwriting INIT.
+%.ihx : %.ast
+	$(AS) -l -o $*.rel $<
+	$(LD) -n -i -b _CODE=0x0200 -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
+
+# -----------------------------------------------------------------------
+# Targets
+# -----------------------------------------------------------------------
+.PHONY: all all_func clean
+
+all: $(VERIF_VMEM)
+
+all_func: all $(FUNC_VMEM)
+
+# Functional test sources live in ../../tests/ – symlink or copy to local
+# then use the pattern rules above.
+alu_optest.ast: $(TESTS_SRC)/alu_optest.ast
+	cp $< $@
+
+load_optest.ast: $(TESTS_SRC)/load_optest.ast
+	cp $< $@
+
+otir.ast: $(TESTS_SRC)/otir.ast
+	cp $< $@
+
+basic_int.asm: $(TESTS_SRC)/basic_int.asm
+	cp $< $@
+
+hello.c: $(TESTS_SRC)/hello.c
+	cp $< $@
+
+# Explicit targets so C-compiled files aren't displaced by SDCC's
+# intermediate .asm output on subsequent builds.
+hello.ihx: hello.c
+	$(CC) $<
+
+# fib.c lives in verif/tests/ as the authoritative version (not copied from tests/).
+fib.ihx: fib.c
+	$(CC) $<
+
+%.ihx : %.c
+	$(CC) $<
+
+# bintr requires its dedicated C runtime crt0
+bintr_crt0.asm: $(TESTS_SRC)/bintr_crt0.asm
+	cp $< $@
+
+bintr_crt0.rel: bintr_crt0.asm
+	$(AS) -l -o bintr_crt0.rel $<
+
+bintr.ihx: $(TESTS_SRC)/bintr.c bintr_crt0.rel
+	$(CC) --no-std-crt0 $^ -- -m -j -x
+
+clean:
+	rm -f *.rel *.ihx *.vmem *.lnk *.map *.sym *.rst *.noi *.lk
+	rm -f alu_optest.ast load_optest.ast otir.ast basic_int.asm
+	rm -f hello.c bintr.c bintr_crt0.asm fib.asm
+
+# distclean also removes listing files (kept by clean for debugging)
+distclean: clean
+	rm -f *.lst

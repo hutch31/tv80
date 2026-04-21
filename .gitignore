@@ -1,0 +1,42 @@
+# -----------------------------------------------------------------------
+# Assembler / linker build artifacts (sdcc / sdasz80)
+# -----------------------------------------------------------------------
+verif/tests/*.vmem
+verif/tests/*.rel
+verif/tests/*.lst
+verif/tests/*.lk
+verif/tests/*.noi
+verif/tests/*.ihx
+verif/tests/*.map
+verif/tests/*.sym
+
+# -----------------------------------------------------------------------
+# Cocotb / Verilator simulation build artifacts
+# -----------------------------------------------------------------------
+verif/env/sim_build/
+verif/env/results.xml
+verif/env/coverage.dat
+verif/env/coverage_annotated/
+verif/env/__pycache__/
+
+# Waveform dumps
+*.vcd
+*.fst
+*.ghw
+
+# -----------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -----------------------------------------------------------------------
+# Editor / OS noise
+# -----------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
