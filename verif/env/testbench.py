@@ -33,7 +33,7 @@ import random
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, ClockCycles, First, Timer
-from cocotb.result import TestFailure
+from cocotb.result import SimTimeoutError
 
 # ---------------------------------------------------------------------------
 # IO port addresses
@@ -298,16 +298,22 @@ class TV80TB:
     async def run_until_complete(self, timeout_cycles=DEFAULT_TIMEOUT):
         """
         Poll every clock cycle until the Z80 program writes to SIM_CTL_PORT
-        (setting test_result to PASS or FAIL) or until *timeout_cycles*
-        elapse.  Returns the result string.
+        (setting test_result to PASS or FAIL) or until *timeout_cycles* elapse.
+        Raises SimTimeoutError on any timeout (io_model or cycle limit).
+        Returns "PASS" or "FAIL" otherwise.
         """
         for _ in range(timeout_cycles):
             await RisingEdge(self.dut.clk)
+            if self.test_result == "TIMEOUT":
+                raise SimTimeoutError(
+                    f"io_model timeout after {self.max_timeout} cycles"
+                )
             if self.test_result is not None:
                 return self.test_result
-        if self.test_result is None:
-            self.test_result = "TIMEOUT"
-        return self.test_result
+        self.test_result = "TIMEOUT"
+        raise SimTimeoutError(
+            f"Test timed out after {timeout_cycles} cycles"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -318,8 +324,10 @@ async def run_vmem_test(dut, vmem_name, timeout=DEFAULT_TIMEOUT,
     """
     Convenience wrapper: load a .vmem program, reset the CPU, start the IO
     model, and run until the program writes PASS or FAIL.
-    Raises TestFailure if the result is not PASS.
+    Raises SimTimeoutError on timeout, AssertionError on FAIL.
     """
+    log = cocotb.log.getChild(vmem_name)
+    log.info(f"Loading {vmem_name}.vmem (max_timeout={max_timeout} cycles)")
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.int_ack_byte = int_ack_byte
@@ -328,8 +336,8 @@ async def run_vmem_test(dut, vmem_name, timeout=DEFAULT_TIMEOUT,
     cocotb.start_soon(tb.io_model())
     await tb.reset()
     result = await tb.run_until_complete(timeout)
-    if result != "PASS":
-        raise TestFailure(f"Test {vmem_name}: expected PASS, got {result}")
+    log.info(f"{vmem_name}: {result}")
+    assert result == "PASS", f"{vmem_name}: expected PASS, got {result}"
 
 
 # ===========================================================================
@@ -366,7 +374,7 @@ async def rst_01_reset_basic(dut):
             found = True
             break
     if not found:
-        raise TestFailure("RST-01: no M1 cycle detected after reset")
+        assert False, "RST-01: no M1 cycle detected after reset"
 
 
 @cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
@@ -407,7 +415,7 @@ async def rst_02_reset_reapply(dut):
             found = True
             break
     if not found:
-        raise TestFailure("RST-02: no M1 cycle after second reset")
+        assert False, "RST-02: no M1 cycle after second reset"
 
 
 @cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
@@ -753,7 +761,6 @@ async def func_01_hello_world(dut):
     result = await tb.run_until_complete()
     output = "".join(tb._msg_buf)
     assert result == "PASS", f"FUNC-01: result={result}"
-    assert "Hello" in output or True, "FUNC-01: 'Hello' not found in MSG output"
 
 
 @cocotb.test(timeout_time=21_000_000, timeout_unit="ns")

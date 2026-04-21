@@ -40,20 +40,42 @@ The testbench mirrors the legacy `env/tb_top.v` structure:
 
 ### 3.2 IO Port Map
 
-| Port | Address | Direction | Description |
-|------|---------|-----------|-------------|
-| `SIM_CTL_PORT` | 0x80 | W | Write 0x01 → test pass; 0x02 → test fail |
-| `MSG_PORT` | 0x81 | W | Character output (newline flushes to log) |
-| `TIMEOUT_PORT` | 0x82 | R/W | Timeout enable/reset control |
-| `MAX_TIMEOUT_LOW` | 0x83 | R/W | Timeout threshold low byte |
-| `MAX_TIMEOUT_HIGH` | 0x84 | R/W | Timeout threshold high byte |
-| `INTR_CNTDWN` | 0x90 | R/W | INT countdown; fires when reaches 1 |
-| `CKSUM_VALUE` | 0x91 | R/W | Checksum register (read/set) |
-| `CKSUM_ACCUM` | 0x92 | W | Accumulate byte into checksum |
-| `INC_ON_READ` | 0x93 | R/W | Value that increments each read |
-| `RANDVAL` | 0x94 | R | Pseudo-random value |
-| `NMI_CNTDWN` | 0x95 | R/W | NMI countdown; fires when reaches 1 |
-| `NMI_TRIG_OPCODE` | 0xA0 | R/W | Trigger NMI when IR equals this opcode |
+All ports are accessed via Z80 `IN`/`OUT` instructions. The Cocotb `io_model` coroutine implements the port behaviour in software.
+
+#### Control / Status Ports
+
+| Port | Address | Dir | Description |
+|------|---------|-----|-------------|
+| `SIM_CTL_PORT` | `0x80` | W | Write `0x01` → signal **PASS** and end test. Write `0x02` → signal **FAIL** and end test. |
+| `MSG_PORT` | `0x81` | W | Write a byte to emit a character. A newline (`0x0A`) flushes the buffer to the simulation log as `PROGRAM: <text>`. |
+
+#### Timeout Control Ports
+
+The timeout counter increments every clock cycle while enabled. When it reaches `max_timeout` the test is marked **TIMEOUT**.
+
+| Port | Address | Dir | Description |
+|------|---------|-----|-------------|
+| `TIMEOUT_PORT` | `0x82` | R/W | Bit 0: counter enable (1=run, 0=freeze). Bit 1: counter reset (write 1 to clear to zero). Read returns current control byte. |
+| `MAX_TIMEOUT_LOW` | `0x83` | R/W | Low byte of the 16-bit timeout threshold (clock cycles). |
+| `MAX_TIMEOUT_HIGH` | `0x84` | R/W | High byte of the 16-bit timeout threshold. Default: `0x01F4` (500 cycles). |
+
+#### Interrupt Generation Ports
+
+| Port | Address | Dir | Description |
+|------|---------|-----|-------------|
+| `INTR_CNTDWN` | `0x90` | R/W | Write N > 0: start countdown; `int_n` asserts low after N cycles. Write 0: disable. Read: current countdown value. `int_n` is automatically deasserted when the CPU performs an INT-acknowledge cycle. |
+| `NMI_CNTDWN` | `0x95` | R/W | Write N > 0: start countdown; `nmi_n` pulses low for one cycle after N cycles. Write 0: disable. Read: current countdown value. NMI is edge-triggered, so it fires exactly once per write. |
+| `NMI_TRIG_OPCODE` | `0xA0` | R/W | Write an opcode byte. When the CPU's instruction register (`IR`) matches this value, `nmi_n` is pulsed low for one cycle. Write `0x00` to disable. |
+
+#### Utility / Data Ports
+
+| Port | Address | Dir | Description |
+|------|---------|-----|-------------|
+| `CKSUM_VALUE` | `0x91` | R/W | Read or set the 8-bit running checksum register directly. |
+| `CKSUM_ACCUM` | `0x92` | W | Add the written byte to the checksum register (modulo 256). Useful for verifying data sequences without a subtract loop. |
+| `INC_ON_READ` | `0x93` | R/W | Write to set a value; each subsequent read returns the current value then increments it by 1 (wraps at 255). Useful for testing IN loops. |
+| `RANDVAL` | `0x94` | R | Returns the next byte from a simple LCG pseudo-random sequence. The seed is re-randomised each simulation run. |
+
 
 ### 3.3 Test Control Protocol
 

@@ -12,6 +12,7 @@
     .module load_mem
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 MEM_BASE = 0x8000
 
     .area PROGMEM (ABS)
@@ -19,12 +20,26 @@ MEM_BASE = 0x8000
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; LD-08: LD (BC),A / LD (DE),A
     ;========================================================
+    call heartbeat
     ld  bc, #0x8010
     ld  a, #0xCC
     ld  (bc), a             ; write 0xCC to 0x8010
@@ -44,6 +59,7 @@ main:
     ;========================================================
     ; LD-07: LD A,(BC) / LD A,(DE) / LD A,(nn)
     ;========================================================
+    call heartbeat
     ; Read back what we just wrote
     ld  bc, #0x8010
     ld  a, (bc)
@@ -66,6 +82,7 @@ main:
     ;========================================================
     ; LD-09: LD rr,nn (16-bit immediate)
     ;========================================================
+    call heartbeat
     ld  bc, #0x1234
     ld  a, b
     cp  a, #0x12
@@ -93,6 +110,7 @@ main:
     ;========================================================
     ; LD-10: LD (nn),HL / LD HL,(nn)
     ;========================================================
+    call heartbeat
     ld  hl, #0xABCD
     ld  (0x8040), hl
     ld  hl, #0x0000
@@ -107,6 +125,7 @@ main:
     ;========================================================
     ; LD-11: LD rr,(nn) / LD (nn),rr  (ED-prefix 16-bit indirect)
     ;========================================================
+    call heartbeat
     ; LD (nn),BC: store BC=0x1234 at 0x8050
     ld  bc, #0x1234
     .db 0xED, 0x43, 0x50, 0x80  ; LD (0x8050),BC
@@ -172,6 +191,7 @@ main:
     ;========================================================
     ; LD-12: LD SP,HL / LD SP,IX / LD SP,IY
     ;========================================================
+    call heartbeat
     ld  hl, #0x8FFE         ; set SP via HL (must be valid for stack use later)
     ld  sp, hl
     .db 0xED, 0x73, 0x90, 0x80  ; LD (0x8090),SP
@@ -200,6 +220,7 @@ main:
     ;========================================================
     ; LD-13: LDI / LDD / LDIR / LDDR
     ;========================================================
+    call heartbeat
     ; Prepare source buffer at 0x8100: bytes 0x01..0x08
     ld  hl, #0x8100
     ld  b, #8

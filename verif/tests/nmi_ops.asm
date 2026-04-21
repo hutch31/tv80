@@ -18,6 +18,7 @@ _sim_ctl_port  = 0x80
 _intr_cntdwn   = 0x90
 _nmi_cntdwn    = 0x95
 _nmi_trig_opcode = 0xA0
+_timeout_port  = 0x82
 
 NMI_COUNT  = 0x8000         ; NMI entry counter
 INT_COUNT  = 0x8001         ; INT entry counter
@@ -26,6 +27,19 @@ HALT_FLAG  = 0x8002         ; set by NMI handler when entered from HALT
     .area PROGMEM (ABS)
     .org 0x0000
     jp  main
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter
+;------------------------------------------------------------------
+    .org 0x0003
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
 
     ; Maskable INT handler (IM 1) at 0x0038
     .org 0x0038
@@ -63,6 +77,7 @@ nmi_not_halt:
     .org 0x0100
 main:
     ld  sp, #0xFFFF
+    call heartbeat              ; reset timeout from reset-sequence cycles
 
     ; Clear all counters and flags
     ld  a, #0x00
@@ -82,7 +97,8 @@ main:
 nmi01_wait:
     ld  a, (NMI_COUNT)
     cp  a, #1
-    jp  z, nmi01_done
+    jp  nc, nmi01_done      ; exit when count >= 1
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
@@ -105,7 +121,8 @@ nmi01_done:
 nmi02_wait:
     ld  a, (INT_COUNT)
     cp  a, #1
-    jp  z, nmi02_done
+    jp  nc, nmi02_done      ; exit when count >= 1
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
@@ -116,6 +133,7 @@ nmi02_done:
     ;========================================================
     ; NMI-03: NMI during HALT
     ;========================================================
+    call heartbeat              ; reset timeout before HALT section
     ld  a, #0xAA
     ld  (HALT_FLAG), a      ; sentinel so NMI handler knows we were halting
 
@@ -152,7 +170,8 @@ nmi02_done:
 nmi04_wait:
     ld  a, (NMI_COUNT)
     cp  a, #3               ; now at 3 (was 2 after NMI-03)
-    jp  z, nmi04_done
+    jp  nc, nmi04_done      ; exit when count >= 3
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
@@ -163,6 +182,7 @@ nmi04_done:
     ;========================================================
     ; NMI-05: NMI opcode trigger via NMI_TRIG_OPCODE port
     ;========================================================
+    call heartbeat              ; reset timeout before opcode-trigger section
     ; Set trigger opcode = 0x3C (INC A): NMI fires when IR = INC A
     di                      ; mask INT while setting up
     ld  a, #0x3C

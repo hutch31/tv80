@@ -10,18 +10,33 @@
     .module load_reg
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 
     .area PROGMEM (ABS)
     .org 0x0000
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; LD-02: LD r,n (immediate)
     ;========================================================
+    call heartbeat
     ld  a, #0xA5
     cp  a, #0xA5
     jp  nz, test_fail
@@ -59,6 +74,7 @@ main:
     ;========================================================
     ; LD-01: LD r,r' (all combinations)
     ;========================================================
+    call heartbeat
     ; Load known values into each register then copy
     ld  b, #0x12
     ld  c, b            ; C = 0x12
@@ -133,6 +149,7 @@ main:
     ;========================================================
     ; LD-03: LD r,(HL) / LD (HL),r
     ;========================================================
+    call heartbeat
     ; Write 0xAB to RAM via LD (HL),A
     ld  hl, #0x8000
     ld  a, #0xAB
@@ -181,6 +198,7 @@ main:
     ;========================================================
     ; LD-04: LD r,(IX+d) / LD (IX+d),r / LD (IX+d),n
     ;========================================================
+    call heartbeat
     ; Write 0x12 to 0x8010 and read via IX+d
     ld  hl, #0x8010
     ld  (hl), #0x12
@@ -214,6 +232,7 @@ main:
     ;========================================================
     ; LD-05: LD r,(IY+d) / LD (IY+d),r / LD (IY+d),n
     ;========================================================
+    call heartbeat
     .db 0xFD, 0x21, 0x00, 0x80  ; LD IY,0x8000
     ; Write 0xAA to 0x8020 then read via IY+0x20
     ld  hl, #0x8020
@@ -238,6 +257,7 @@ main:
     ;========================================================
     ; LD-06: LD I,A / LD A,I / LD R,A / LD A,R
     ;========================================================
+    call heartbeat
     ; LD I,A
     ld  a, #0x5A
     .db 0xED, 0x47          ; LD I,A

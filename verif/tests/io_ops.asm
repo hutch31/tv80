@@ -14,6 +14,7 @@
     .module io_ops
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 _cksum_value  = 0x91
 _cksum_accum  = 0x92
 _inc_on_read  = 0x93
@@ -23,12 +24,26 @@ _inc_on_read  = 0x93
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; IO-01: OUT (n),A / IN A,(n)
     ;========================================================
+    call heartbeat
     ; Write a known value to CKSUM_VALUE then read it back
     ld  a, #0x55
     out (_cksum_value), a   ; set checksum to 0x55
@@ -61,6 +76,7 @@ main:
     ;========================================================
     ; IO-02: IN r,(C) / OUT (C),r  (ED prefix)
     ;========================================================
+    call heartbeat
     ; Set CKSUM_VALUE = 0x77 via OUT (n),A
     ld  a, #0x77
     out (_cksum_value), a
@@ -105,6 +121,7 @@ main:
     ;========================================================
     ; IO-03: Block I/O – OTIR / OTDR / OUTI / OUTD
     ;========================================================
+    call heartbeat
     ; Initialize source buffer at 0x8100 with 0x01..0x08
     ld  hl, #0x8100
     ld  b, #8
@@ -118,6 +135,9 @@ init_buf:
     ; Reset checksum to 0
     ld  a, #0
     out (_cksum_value), a
+
+    ; -- heartbeat before block output --
+    call heartbeat
 
     ; OTIR: output 8 bytes from 0x8100 to port C=0x92 (CKSUM_ACCUM)
     ld  hl, #0x8100
@@ -162,6 +182,9 @@ init_buf:
     in  a, (_cksum_value)
     cp  a, #0x1A            ; 8+7+6+5=26=0x1A
     jp  nz, test_fail
+
+    ; -- heartbeat before block input --
+    call heartbeat
 
     ; INIR: input 4 bytes from CKSUM_VALUE into 0x8200..0x8203
     ; Each read of CKSUM_VALUE (0x91) returns 0x77 (set earlier)

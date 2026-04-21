@@ -12,10 +12,24 @@
 
 _sim_ctl_port = 0x80
 _intr_cntdwn  = 0x90
+_timeout_port = 0x82
 
     .area PROGMEM (ABS)
     .org 0x0000
     jp  main
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter
+;------------------------------------------------------------------
+    .org 0x0003
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
 
     ; IM 1 ISR at 0x0038
     .org 0x0038
@@ -31,9 +45,9 @@ isr_im1:
     jp  nz, isr_done        ; only try nested on first entry
 
     ; Schedule a nested INT (INT-06 test)
+    ei                      ; enable to allow nested interrupt
     ld  a, #2
     out (_intr_cntdwn), a   ; will fire after 2 ticks
-    ei                      ; enable to allow nested interrupt
     ; Brief delay so the nested INT can be taken
     nop
     nop
@@ -80,7 +94,8 @@ main:
 wait_first:
     ld  a, (0x8000)
     cp  a, #1
-    jp  z, first_done
+    jp  nc, first_done      ; exit when count >= 1
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
@@ -93,13 +108,20 @@ first_done:
 wait_nested:
     ld  a, (0x8000)
     cp  a, #2
-    jp  z, nested_done
+    jp  nc, nested_done     ; exit when count >= 2
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
     jp  nz, wait_nested
     ; Nested INT may not be reliable – treat as optional pass
 nested_done:
+
+    ; Reset the timeout counter
+    ld  a, #0x02
+    out (_timeout_port), a  ; reset counter first
+    ld  a, #0x01
+    out (_timeout_port), a  ; re-enable counting
 
     ;========================================================
     ; INT-04: EI delay – INT not taken until after the instruction following EI
@@ -124,7 +146,8 @@ nested_done:
 wait_ei_delay:
     ld  a, (0x8000)
     cp  a, #3
-    jp  z, ei_delay_done
+    jp  nc, ei_delay_done   ; exit when count >= 3
+    call heartbeat
     dec de
     ld  a, d
     or  a, e
@@ -147,7 +170,8 @@ ei_delay_done:
 wait_reti:
     ld  a, (0x8000)
     cp  a, #4
-    jp  z, reti_done
+    jp  nc, reti_done       ; exit when count >= 4
+    call heartbeat
     dec de
     ld  a, d
     or  a, e

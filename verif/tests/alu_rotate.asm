@@ -10,6 +10,7 @@
     .module alu_rotate
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 FLAG_C   = 0x01
 FLAG_Z   = 0x40
 FLAG_S   = 0x80
@@ -22,12 +23,26 @@ FLAG_PV  = 0x04
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; ROT-01: RLCA (rotate left circular accumulator)
     ;========================================================
+    call heartbeat
     ; 0x80 → 0x01, C=1 (bit7 goes to C and bit0)
     ld  a, #0x80
     rlca
@@ -50,6 +65,7 @@ main:
     ;========================================================
     ; ROT-01: RRCA (rotate right circular accumulator)
     ;========================================================
+    call heartbeat
     ; 0x01 → 0x80, C=1
     ld  a, #0x01
     rrca
@@ -67,6 +83,7 @@ main:
     ;========================================================
     ; ROT-02: RLA (rotate left through carry)
     ;========================================================
+    call heartbeat
     ; C=0, A=0x80: bit7 → C, A=0x00, old_C → bit0 → A=0x00
     ld  a, #0x80
     or  a, a                ; clear carry
@@ -102,6 +119,7 @@ main:
     ;========================================================
     ; ROT-02: RRA (rotate right through carry)
     ;========================================================
+    call heartbeat
     ; C=0, A=0x01: A → 0x00, C=1 (bit0 into C)
     ld  a, #0x01
     or  a, a                ; C=0
@@ -121,6 +139,7 @@ main:
     ;========================================================
     ; ROT-03: CB-prefix rotate/shift on registers
     ;========================================================
+    call heartbeat
     ; RLC A (CB 07): 0x80 → 0x01, C=1
     ld  a, #0x80
     .db 0xCB, 0x07          ; RLC A
@@ -196,6 +215,7 @@ main:
     ;========================================================
     ; ROT-05: CB rotate on (HL)
     ;========================================================
+    call heartbeat
     ; Place 0x80 in RAM, RLC (HL), verify (HL)=0x01, C=1
     ld  hl, #0x8000         ; RAM address
     ld  (hl), #0x80
@@ -214,6 +234,7 @@ main:
     ;========================================================
     ; ROT-04: RLD (ED 6F) and RRD (ED 67)
     ;========================================================
+    call heartbeat
     ; RLD: high nibble of A → low nibble of A
     ;      low nibble of (HL) → high nibble of (HL)
     ;      old high nibble of (HL) → low nibble of A

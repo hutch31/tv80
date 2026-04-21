@@ -9,18 +9,33 @@
     .module alu_arith16
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 
     .area PROGMEM (ABS)
     .org 0x0000
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; ALU-05: ADD HL,rr
     ;========================================================
+    call heartbeat
     ; ADD HL,BC: 0x1000 + 0x0234 = 0x1234
     ld  hl, #0x1000
     ld  bc, #0x0234
@@ -75,6 +90,7 @@ after_add_sp_carry:
     ;========================================================
     ; ALU-06: ADC HL,rr (all register pairs, S/Z/P/V updated)
     ;========================================================
+    call heartbeat
     ; ADC HL,BC with carry=0: 0x1000 + 0x0200 + 0 = 0x1200
     ld  hl, #0x1000
     ld  bc, #0x0200
@@ -120,6 +136,7 @@ after_add_sp_carry:
     ;========================================================
     ; ALU-07: SBC HL,rr (all register pairs, N=1)
     ;========================================================
+    call heartbeat
     ; SBC HL,BC borrow=0: 0x1234 - 0x0234 - 0 = 0x1000
     ld  hl, #0x1234
     ld  bc, #0x0234
@@ -160,6 +177,8 @@ after_add_sp_carry:
     ;========================================================
     ; ALU-09: INC rr / DEC rr (no flags affected)
     ;========================================================
+    ld  sp, #0xFFFF             ; restore SP before heartbeat (SBC test left SP=0x0001)
+    call heartbeat
     ; Set carry and zero flags, then INC BC – flags must be unchanged
     xor a, a                    ; Z=1, S=0
     scf                         ; C=1
@@ -199,6 +218,9 @@ after_inc_hl_z:
     ld  a, l
     cp  a, #0x00
     jp  nz, test_fail
+
+    ; -- heartbeat before SP tests --
+    call heartbeat
 
     ; DEC SP: 0x0001 → 0x0000
     ld  sp, #0x0001

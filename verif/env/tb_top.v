@@ -132,4 +132,14 @@ module tb_top (
         end
     end
 
+    // -----------------------------------------------------------------------
+    // Waveform dump (enabled by WAVES=1 via +verilator+trace plusarg)
+    // -----------------------------------------------------------------------
+    initial begin
+        if ($test$plusargs("verilator+trace")) begin
+            $dumpfile("dump.vcd");
+            $dumpvars(0, tb_top);
+        end
+    end
+
 endmodule

@@ -12,6 +12,7 @@
     .module jump_ops
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 
     .area PROGMEM (ABS)
     .org 0x0000
@@ -75,6 +76,19 @@ rst38_handler:
     ret
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
@@ -89,6 +103,7 @@ clr_loop:
     ;========================================================
     ; JMP-01: JP nn (unconditional)
     ;========================================================
+    call heartbeat
     jp  jp_target
     jp  test_fail           ; must NOT reach here
 jp_target:
@@ -96,6 +111,7 @@ jp_target:
     ;========================================================
     ; JMP-02: JP cc,nn – all 8 conditions
     ;========================================================
+    call heartbeat
     ; NZ: Z=0 → jump taken
     ld  a, #0x01            ; A=0x01
     or  a, a                ; Z=0 (non-zero result; OR also clears C)
@@ -161,6 +177,7 @@ jp_m_ok:
     ;========================================================
     ; JMP-03: JR e (relative unconditional)
     ;========================================================
+    call heartbeat
     ; JR +0 (jump to next instruction = 2-byte NOP)
     .db 0x18, 0x00          ; JR +0 (next instruction)
     ; JR -2 would loop forever; just do a forward jump
@@ -171,6 +188,7 @@ jp_m_ok:
     ;========================================================
     ; JMP-04: JR cc,e (NZ Z NC C)
     ;========================================================
+    call heartbeat
     ; JR NZ: Z=0 → jump
     ld  a, #0x01            ; Z=0
     .db 0x20, 0x01          ; JR NZ, +1 (skip 1 byte)
@@ -191,6 +209,7 @@ jp_m_ok:
     ;========================================================
     ; JMP-05: JP (HL) / JP (IX) / JP (IY)
     ;========================================================
+    call heartbeat
     ld  hl, #jp_hl_target
     jp  (hl)
     jp  test_fail
@@ -213,6 +232,7 @@ jp_iy_target:
     ;========================================================
     ; JMP-06: DJNZ
     ;========================================================
+    call heartbeat
     ; Loop 5 times
     ld  b, #5
     ld  c, #0
@@ -228,6 +248,7 @@ djnz_loop:
     ;========================================================
     ; JMP-07: CALL nn / RET
     ;========================================================
+    call heartbeat
     call test_sub           ; call and return
     ; Verify the subroutine set A=0xBE
     cp  a, #0xBE
@@ -249,6 +270,7 @@ djnz_loop:
     ;========================================================
     ; JMP-08: RST 00/08/10/18/20/28/30/38
     ;========================================================
+    call heartbeat
     ; RST 00H: RST 0x00 = 0xC7 jumps to 0x0000 which is a JP main...
     ; That would restart execution. Skip RST 00H test.
 

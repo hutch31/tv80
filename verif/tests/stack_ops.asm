@@ -6,18 +6,33 @@
     .module stack_ops
 
 _sim_ctl_port = 0x80
+_timeout_port = 0x82
 
     .area PROGMEM (ABS)
     .org 0x0000
     jp  main
 
     .org 0x0100
+
+;------------------------------------------------------------------
+; Reset the simulation timeout counter (heartbeat at each section)
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a     ; reset counter
+    ld   a, #0x01
+    out  (_timeout_port), a     ; re-enable counting
+    pop  af
+    ret
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; STK-01: PUSH/POP
     ;========================================================
+    call heartbeat
     ; PUSH BC / POP DE: verify DE = original BC
     ld  bc, #0x1234
     push bc
@@ -118,6 +133,7 @@ main:
     ;========================================================
     ; STK-02: EX (SP),HL / EX (SP),IX / EX (SP),IY
     ;========================================================
+    call heartbeat
     ; EX (SP),HL: swap HL with top of stack
     ld  sp, #0x8FFE
     ld  hl, #0xABCD

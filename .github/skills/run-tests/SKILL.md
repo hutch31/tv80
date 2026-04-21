@@ -22,24 +22,24 @@ argument-hint: '[test name or "all"]'
 ## Procedure
 
 ### Step 1 – Build test programs (if not already built)
-```powershell
+```pwsh
 podman run -it -v /c/Users/Guy/Documents/tv80:/app -w /app tvtools sh -c "(cd verif/tests; make)"
 ```
 This compiles all `.asm` files into `.vmem` Verilog memory images.
 
 ### Step 2 – Run all tests
-```powershell
+```pwsh
 podman run -v /c/Users/Guy/Documents/tv80:/app -w /app tvtools sh -c "cd verif/env && make SIM=verilator TOPLEVEL=tb_top MODULE=testbench 2>&1"
 ```
 
 ### Step 3 – Run a single test
-```powershell
+```pwsh
 podman run -v /c/Users/Guy/Documents/tv80:/app -w /app tvtools sh -c "cd verif/env && make SIM=verilator TOPLEVEL=tb_top MODULE=testbench TESTCASE=<test name> 2>&1"
 ```
 Example test names: `rst_01_reset_basic`, `alu_01_add`, `int_im1_basic`
 
 ### Step 4 – Generate coverage report
-```powershell
+```pwsh
 podman run -it -v /c/Users/Guy/Documents/tv80:/app -w /app tvtools sh -c "(cd verif/env; make coverage)"
 ```
 Coverage report is written to `verif/env/coverage_annotated/`.

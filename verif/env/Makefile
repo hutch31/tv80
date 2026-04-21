@@ -47,6 +47,11 @@ EXTRA_ARGS += -Wno-WIDTHTRUNC
 EXTRA_ARGS += -Wno-CASEINCOMPLETE
 EXTRA_ARGS += -Wno-UNOPTFLAT
 
+# Enable VCD waveform dump when WAVES=1
+ifeq ($(WAVES),1)
+EXTRA_ARGS += --trace
+endif
+
 # -----------------------------------------------------------------------
 # Run all tests and then produce a merged coverage report
 # -----------------------------------------------------------------------
