@@ -769,17 +769,6 @@ async def func_02_fibonacci(dut):
     await run_vmem_test(dut, "fib", timeout=2_000_000, max_timeout=1_500_000)
 
 
-@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
-async def func_03_basic_interrupt(dut):
-    """FUNC-03: Run tests/basic_int.asm - interrupt fires and is acknowledged."""
-    await run_vmem_test(dut, "basic_int")
-
-
-@cocotb.test(timeout_time=21_000_000, timeout_unit="ns")
-async def func_04_bintr(dut):
-    """FUNC-04: Run tests/bintr.asm - alternating INT and NMI phases."""
-    await run_vmem_test(dut, "bintr", timeout=2_000_000, max_timeout=1_500_000)
-
 
 @cocotb.test(timeout_time=30_000_000, timeout_unit="ns")
 async def func_05_alu_optest(dut):
@@ -792,8 +781,3 @@ async def func_06_load_optest(dut):
     """FUNC-06: Run tests/load_optest.ast - comprehensive load self-test."""
     await run_vmem_test(dut, "load_optest", timeout=2_000_000, max_timeout=1_500_000)
 
-
-@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
-async def func_07_otir_test(dut):
-    """FUNC-07: Run tests/otir.ast - OTIR block output instruction."""
-    await run_vmem_test(dut, "otir")

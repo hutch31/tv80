@@ -33,12 +33,17 @@ heartbeat:
     pop  af
     ret
 
+; Section ID stored in RAM at 0x8FF0; test_fail reads and outputs it to MSG_PORT
+SECTION_ID = 0x8FF0
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; LD-08: LD (BC),A / LD (DE),A
     ;========================================================
+    ld  a, #0x01
+    ld  (SECTION_ID), a
     call heartbeat
     ld  bc, #0x8010
     ld  a, #0xCC
@@ -59,6 +64,8 @@ main:
     ;========================================================
     ; LD-07: LD A,(BC) / LD A,(DE) / LD A,(nn)
     ;========================================================
+    ld  a, #0x02
+    ld  (SECTION_ID), a
     call heartbeat
     ; Read back what we just wrote
     ld  bc, #0x8010
@@ -82,6 +89,8 @@ main:
     ;========================================================
     ; LD-09: LD rr,nn (16-bit immediate)
     ;========================================================
+    ld  a, #0x03
+    ld  (SECTION_ID), a
     call heartbeat
     ld  bc, #0x1234
     ld  a, b
@@ -110,6 +119,8 @@ main:
     ;========================================================
     ; LD-10: LD (nn),HL / LD HL,(nn)
     ;========================================================
+    ld  a, #0x04
+    ld  (SECTION_ID), a
     call heartbeat
     ld  hl, #0xABCD
     ld  (0x8040), hl
@@ -125,6 +136,8 @@ main:
     ;========================================================
     ; LD-11: LD rr,(nn) / LD (nn),rr  (ED-prefix 16-bit indirect)
     ;========================================================
+    ld  a, #0x05
+    ld  (SECTION_ID), a
     call heartbeat
     ; LD (nn),BC: store BC=0x1234 at 0x8050
     ld  bc, #0x1234
@@ -191,6 +204,8 @@ main:
     ;========================================================
     ; LD-12: LD SP,HL / LD SP,IX / LD SP,IY
     ;========================================================
+    ld  a, #0x06
+    ld  (SECTION_ID), a
     call heartbeat
     ld  hl, #0x8FFE         ; set SP via HL (must be valid for stack use later)
     ld  sp, hl
@@ -220,6 +235,8 @@ main:
     ;========================================================
     ; LD-13: LDI / LDD / LDIR / LDDR
     ;========================================================
+    ld  a, #0x71
+    ld  (SECTION_ID), a
     call heartbeat
     ; Prepare source buffer at 0x8100: bytes 0x01..0x08
     ld  hl, #0x8100
@@ -235,25 +252,32 @@ ldir_init:
     ld  hl, #0x8100         ; source
     ld  de, #0x8200         ; dest
     ld  bc, #8              ; count
+    call heartbeat          ; fresh budget for LDIR (block copy may use many cycles)
     .db 0xED, 0xB0          ; LDIR
-    ; PV must be clear (BC=0 means no more to copy) — save flags before any ALU
-    push af
-    pop  bc
-    ld   a, c
-    and  a, #0x04
-    jp   nz, test_fail
-    ; BC must be 0 after LDIR
+    ; Check PV=0 immediately before any ALU clobbers flags
+    jp  pe, ldir_pv_fail    ; 72: LDIR PV set when BC=0 (should be clear)
+    ; Check BC=0
+    ld  a, #0x71
+    ld  (SECTION_ID), a
     ld  a, b
     or  a, c
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 71: LDIR BC not zero
+    jp  verify_ldir_start
+ldir_pv_fail:
+    ld  a, #0x72
+    ld  (SECTION_ID), a
+    jp  test_fail
+verify_ldir_start:
 
     ; Verify copy
+    ld  a, #0x73
+    ld  (SECTION_ID), a
     ld  hl, #0x8200
     ld  b, #1
 verify_ldir:
     ld  a, (hl)
     cp  a, b
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 73: LDIR copy data wrong
     inc hl
     inc b
     ld  a, b
@@ -261,6 +285,8 @@ verify_ldir:
     jp  nz, verify_ldir
 
     ; LDI: single transfer 0x8100[0] → 0x8300[0]
+    ld  a, #0x74
+    ld  (SECTION_ID), a
     ld  hl, #0x8100
     ld  de, #0x8300
     ld  bc, #4
@@ -268,39 +294,59 @@ verify_ldir:
     ld  a, b
     cp  a, #0x00
     jp  nz, test_fail_ldi_bc
+    ld  a, #0x75
+    ld  (SECTION_ID), a
     ld  a, c
     cp  a, #0x03
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 75: LDI BC.C wrong
+    ld  a, #0x76
+    ld  (SECTION_ID), a
     ld  hl, #0x8300
     ld  a, (hl)
     cp  a, #0x01
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 76: LDI data wrong
     jp  after_ldi
 test_fail_ldi_bc:
-    jp  test_fail
+    jp  test_fail           ; 74: LDI BC.B wrong
 after_ldi:
 
-    ; LDDR: copy 4 bytes backwards from 0x8103 to 0x8403 (ending at 0x8100→0x8400)
+    ; LDDR: copy 4 bytes backwards from 0x8103 to 0x8403
+    ld  a, #0x77
+    ld  (SECTION_ID), a
     ld  hl, #0x8103         ; last byte of source block
     ld  de, #0x8403         ; last byte of dest block
     ld  bc, #4
+    call heartbeat          ; fresh budget for LDDR (block copy may use many cycles)
     .db 0xED, 0xB8          ; LDDR
+    ; Check PV=0 immediately before any ALU clobbers flags
+    jp  pe, lddr_pv_fail    ; 77b: LDDR PV set when BC=0 (should be clear)
+    ; Check BC=0
     ld  a, b
     or  a, c
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 77: LDDR BC not zero
+    jp  after_lddr
+lddr_pv_fail:
+    ld  a, #0x7B
+    ld  (SECTION_ID), a
+    jp  test_fail
+after_lddr:
 
     ; LDD: single reverse transfer
+    ld  a, #0x78
+    ld  (SECTION_ID), a
     ld  hl, #0x8103
     ld  de, #0x8503
     ld  bc, #2
     .db 0xED, 0xA8          ; LDD
     ld  a, c
     cp  a, #0x01
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 78: LDD BC.C wrong
+    ld  a, #0x79
+    ld  (SECTION_ID), a
     ld  hl, #0x8503
     ld  a, (hl)
     cp  a, #0x04            ; byte at 0x8103 is 0x04
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 79: LDD data wrong
 
     jp  test_pass
 
@@ -310,6 +356,27 @@ test_pass:
     halt
 
 test_fail:
+    push af
+    push bc
+    ld  a, (SECTION_ID)
+    ld  b, a
+    ; output high nibble
+    rlca
+    rlca
+    rlca
+    rlca
+    and a, #0x0F
+    add a, #0x30
+    out (0x81), a
+    ; output low nibble
+    ld  a, b
+    and a, #0x0F
+    add a, #0x30
+    out (0x81), a
+    ld  a, #0x0A
+    out (0x81), a           ; newline to flush
+    pop bc
+    pop af
     ld  a, #0x02
     out (_sim_ctl_port), a
     halt

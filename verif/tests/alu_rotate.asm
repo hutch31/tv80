@@ -36,12 +36,17 @@ heartbeat:
     pop  af
     ret
 
+; Section ID stored in RAM at 0x8FF0; test_fail reads and outputs it to MSG_PORT
+SECTION_ID = 0x8FF0
+
 main:
     ld  sp, #0xFFFF
 
     ;========================================================
     ; ROT-01: RLCA (rotate left circular accumulator)
     ;========================================================
+    ld  a, #0x01
+    ld  (SECTION_ID), a
     call heartbeat
     ; 0x80 → 0x01, C=1 (bit7 goes to C and bit0)
     ld  a, #0x80
@@ -65,6 +70,8 @@ main:
     ;========================================================
     ; ROT-01: RRCA (rotate right circular accumulator)
     ;========================================================
+    ld  a, #0x02
+    ld  (SECTION_ID), a
     call heartbeat
     ; 0x01 → 0x80, C=1
     ld  a, #0x01
@@ -83,6 +90,8 @@ main:
     ;========================================================
     ; ROT-02: RLA (rotate left through carry)
     ;========================================================
+    ld  a, #0x03
+    ld  (SECTION_ID), a
     call heartbeat
     ; C=0, A=0x80: bit7 → C, A=0x00, old_C → bit0 → A=0x00
     ld  a, #0x80
@@ -119,6 +128,8 @@ main:
     ;========================================================
     ; ROT-02: RRA (rotate right through carry)
     ;========================================================
+    ld  a, #0x04
+    ld  (SECTION_ID), a
     call heartbeat
     ; C=0, A=0x01: A → 0x00, C=1 (bit0 into C)
     ld  a, #0x01
@@ -139,6 +150,8 @@ main:
     ;========================================================
     ; ROT-03: CB-prefix rotate/shift on registers
     ;========================================================
+    ld  a, #0x05
+    ld  (SECTION_ID), a
     call heartbeat
     ; RLC A (CB 07): 0x80 → 0x01, C=1
     ld  a, #0x80
@@ -215,6 +228,8 @@ main:
     ;========================================================
     ; ROT-05: CB rotate on (HL)
     ;========================================================
+    ld  a, #0x06
+    ld  (SECTION_ID), a
     call heartbeat
     ; Place 0x80 in RAM, RLC (HL), verify (HL)=0x01, C=1
     ld  hl, #0x8000         ; RAM address
@@ -234,6 +249,8 @@ main:
     ;========================================================
     ; ROT-04: RLD (ED 6F) and RRD (ED 67)
     ;========================================================
+    ld  a, #0x71
+    ld  (SECTION_ID), a
     call heartbeat
     ; RLD: high nibble of A → low nibble of A
     ;      low nibble of (HL) → high nibble of (HL)
@@ -245,10 +262,12 @@ main:
     ld  (hl), #0x34
     .db 0xED, 0x6F          ; RLD
     cp  a, #0x13
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 71: RLD A result wrong
+    ld  a, #0x72
+    ld  (SECTION_ID), a
     ld  a, (hl)
     cp  a, #0x42
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 72: RLD (HL) result wrong
 
     ; RRD: high nibble of (HL) → low nibble of A
     ;      low nibble of A → high nibble of (HL)
@@ -263,12 +282,17 @@ main:
     ; A=0x13, (HL)=0x42:
     ;   new_A  = (0x10) | 0x02 = 0x12
     ;   new_HL = 0x04   | 0x30 = 0x34
+    ld  a, #0x73
+    ld  (SECTION_ID), a
+    ld  a, #0x13            ; restore A=0x13 from after RLD
     .db 0xED, 0x67          ; RRD
     cp  a, #0x12
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 73: RRD A result wrong
+    ld  a, #0x74
+    ld  (SECTION_ID), a
     ld  a, (hl)
     cp  a, #0x34
-    jp  nz, test_fail
+    jp  nz, test_fail       ; 74: RRD (HL) result wrong
 
     jp  test_pass
 
@@ -278,6 +302,27 @@ test_pass:
     halt
 
 test_fail:
+    push af
+    push bc
+    ld  a, (SECTION_ID)
+    ld  b, a
+    ; output high nibble
+    rlca
+    rlca
+    rlca
+    rlca
+    and a, #0x0F
+    add a, #0x30
+    out (0x81), a
+    ; output low nibble
+    ld  a, b
+    and a, #0x0F
+    add a, #0x30
+    out (0x81), a
+    ld  a, #0x0A
+    out (0x81), a           ; newline to flush
+    pop bc
+    pop af
     ld  a, #0x02
     out (_sim_ctl_port), a
     halt

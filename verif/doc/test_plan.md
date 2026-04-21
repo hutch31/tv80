@@ -294,11 +294,11 @@ verif/
 |----|-----------|-------------|---------------|
 | FUNC-01 | `hello_world` | Run `tests/hello.c` compiled program; verify character output via `MSG_PORT`. | "Hello, world!" appears in log |
 | FUNC-02 | `fibonacci` | Run `tests/fib.c`; verify Fibonacci numbers 1–19 correct. | All 19 values match golden reference |
-| FUNC-03 | `basic_interrupt` | Run `tests/basic_int.asm`; interrupt fires and is acknowledged. | Test pass written to `SIM_CTL_PORT` |
-| FUNC-04 | `bintr` | Run `tests/bintr.asm`; alternating INT and NMI phases. | All phases complete; test pass written |
+| ~~FUNC-03~~ | ~~`basic_interrupt`~~ | ~~Run `tests/basic_int.asm`~~; interrupt coverage provided by directed tests int_01–03 and nmi_01–05. | Removed — covered by directed tests |
+| ~~FUNC-04~~ | ~~`bintr`~~ | ~~Run `tests/bintr.asm`~~; interrupt/NMI coverage provided by directed tests int_01–03 and nmi_01–05. | Removed — covered by directed tests |
 | FUNC-05 | `alu_optest` | Run `tests/alu_optest.ast`; comprehensive ALU self-test. | Test pass written |
 | FUNC-06 | `load_optest` | Run `tests/load_optest.ast`; comprehensive load self-test. | Test pass written |
-| FUNC-07 | `otir_test` | Run `tests/otir.ast`; OTIR block output instruction. | Test pass written |
+| ~~FUNC-07~~ | ~~`otir_test`~~ | ~~Run `tests/otir.ast`~~; OTIR/OTDR/INIR/INDR coverage provided by directed test io_01_to_03 (IO-03). | Removed — covered by directed tests |
 
 ---
 
