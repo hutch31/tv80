@@ -64,5 +64,13 @@ coverage: sim
 	    sim_build/coverage.dat || true
 	@echo "Coverage report written to coverage_annotated/"
 
+# Build all test programs (verif + func) before running simulations.
+# GNU Make allows adding prerequisites to targets defined in included files.
+.PHONY: vmem_build
+vmem_build:
+	$(MAKE) -C $(TESTS_DIR) all_func
+
+sim: vmem_build
+
 # Standard cocotb include (must be last)
 include $(shell cocotb-config --makefiles)/Makefile.sim

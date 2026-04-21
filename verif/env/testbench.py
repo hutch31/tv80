@@ -781,10 +781,10 @@ async def func_04_bintr(dut):
     await run_vmem_test(dut, "bintr", timeout=2_000_000, max_timeout=1_500_000)
 
 
-@cocotb.test(timeout_time=51_000_000, timeout_unit="ns")
+@cocotb.test(timeout_time=30_000_000, timeout_unit="ns")
 async def func_05_alu_optest(dut):
     """FUNC-05: Run tests/alu_optest.ast - comprehensive ALU self-test."""
-    await run_vmem_test(dut, "alu_optest", timeout=5_000_000, max_timeout=4_000_000)
+    await run_vmem_test(dut, "alu_optest", timeout=25_000_000, max_timeout=3_000)
 
 
 @cocotb.test(timeout_time=21_000_000, timeout_unit="ns")

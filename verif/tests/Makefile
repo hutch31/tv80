@@ -73,10 +73,12 @@ FUNC_VMEM := $(addsuffix .vmem, $(FUNC_TESTS_AST) $(FUNC_TESTS_ASM) $(FUNC_TESTS
 	$(AS) -l -o $*.rel $<
 	$(LD) -n -i -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
 
-# Functional .ast programs (sdcc z80 assembler convention)
+# Functional .ast programs (sdcc z80 assembler convention).
+# _CODE must be placed after the ABS INIT area (which ends ~0x00FF).
+# Without an explicit base, sdldz80 defaults _CODE to 0x0000, overwriting INIT.
 %.ihx : %.ast
 	$(AS) -l -o $*.rel $<
-	$(LD) -n -i -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
+	$(LD) -n -i -b _CODE=0x0200 -b _DATA=0x8000 $* $*.rel; test -f $*.ihx
 
 # -----------------------------------------------------------------------
 # Targets
@@ -104,8 +106,14 @@ basic_int.asm: $(TESTS_SRC)/basic_int.asm
 hello.c: $(TESTS_SRC)/hello.c
 	cp $< $@
 
-fib.c: $(TESTS_SRC)/fib.c
-	cp $< $@
+# Explicit targets so C-compiled files aren't displaced by SDCC's
+# intermediate .asm output on subsequent builds.
+hello.ihx: hello.c
+	$(CC) $<
+
+# fib.c lives in verif/tests/ as the authoritative version (not copied from tests/).
+fib.ihx: fib.c
+	$(CC) $<
 
 %.ihx : %.c
 	$(CC) $<
@@ -121,6 +129,10 @@ bintr.ihx: $(TESTS_SRC)/bintr.c bintr_crt0.rel
 	$(CC) --no-std-crt0 $^ -- -m -j -x
 
 clean:
-	rm -f *.rel *.ihx *.vmem *.lnk *.map *.lst *.sym *.rst
+	rm -f *.rel *.ihx *.vmem *.lnk *.map *.sym *.rst *.noi *.lk
 	rm -f alu_optest.ast load_optest.ast otir.ast basic_int.asm
-	rm -f hello.c fib.c bintr.c bintr_crt0.asm
+	rm -f hello.c bintr.c bintr_crt0.asm fib.asm
+
+# distclean also removes listing files (kept by clean for debugging)
+distclean: clean
+	rm -f *.lst
