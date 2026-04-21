@@ -187,13 +187,14 @@ main:
     ; 0x80 - 0x01 = 0x7F → overflow (neg-pos=pos), V=1
     ld  a, #0x80
     sub a, #0x01
-    ld  b, #0x7F
-    call check_a
-    push af
+    push af                 ; save flags before check_a clobbers them
     pop  bc
     ld   a, c
     and  a, #FLAG_PV
     jp   z, test_fail       ; V must be set
+    ld  a, #0x7F            ; reload A for check_a
+    ld  b, #0x7F
+    call check_a
 
     ;========================================================
     ; ALU-04: SBC A,n (borrow=0 and borrow=1)
@@ -238,14 +239,15 @@ main:
     ; DEC A: 0x00 -> 0xFF, S=1, N=1
     ld  a, #0x00
     dec a
-    ld  b, #0xFF
-    call check_a
-    jp  p,  test_fail       ; S must be set
-    push af
+    jp  p,  test_fail       ; S must be set (check before call check_a clobbers flags)
+    push af                 ; save flags before check_a clobbers them
     pop  bc
     ld   a, c
     and  a, #FLAG_N
     jp   z, test_fail       ; N must be set after DEC
+    ld  a, #0xFF            ; reload A for check_a
+    ld  b, #0xFF
+    call check_a
 
     ; INC / DEC on B, C, D, E, H, L
     ld  b, #0x10
@@ -320,13 +322,14 @@ main:
     ; NEG of 0x80 = 0x80 (special case: overflow)
     ld  a, #0x80
     .db 0xED, 0x44          ; NEG
-    ld  b, #0x80
-    call check_a
-    push af
+    push af                 ; save flags before check_a clobbers them
     pop  bc
     ld   a, c
     and  a, #FLAG_PV
     jp   z, test_fail       ; V must be set
+    ld  a, #0x80            ; reload A for check_a
+    ld  b, #0x80
+    call check_a
 
     ; NEG of 0x00 = 0x00, Z=1
     ld  a, #0x00

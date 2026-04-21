@@ -114,7 +114,7 @@ class TV80TB:
         # IO model state (mirrors env_io.v)
         self.timeout_ctl     = 0x01   # bit0=enable, bit1=reset
         self.cur_timeout     = 0
-        self.max_timeout     = 10_000
+        self.max_timeout     = 1_000
         self.int_countdown   = 0
         self.nmi_countdown   = 0
         self.nmi_trigger     = 0
@@ -210,8 +210,12 @@ class TV80TB:
                 if self.test_result is None:
                     self.test_result = "TIMEOUT"
 
-            # ---- INT countdown ---------------------------------------
-            if self.int_countdown == 0:
+            # ---- INT countdown / ack ---------------------------------
+            if int_ack_active and self.int_countdown != 0:
+                # CPU acknowledged the interrupt; deassert INT line
+                self.int_countdown = 0
+                dut.int_n.value = 1
+            elif self.int_countdown == 0:
                 dut.int_n.value = 1
             elif self.int_countdown == 1:
                 dut.int_n.value = 0
@@ -310,7 +314,7 @@ class TV80TB:
 # Helper: start clock + reset + io_model then run a named vmem test
 # ---------------------------------------------------------------------------
 async def run_vmem_test(dut, vmem_name, timeout=DEFAULT_TIMEOUT,
-                        int_ack_byte=0xFF, max_timeout=500_000):
+                        int_ack_byte=0xFF, max_timeout=1_000):
     """
     Convenience wrapper: load a .vmem program, reset the CPU, start the IO
     model, and run until the program writes PASS or FAIL.

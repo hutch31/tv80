@@ -111,7 +111,9 @@ main:
     jp  nz, test_fail
 
     ; C=1, A=0x00: A → 0x80 (old C into bit7), C=0
-    rra                     ; C was 1 from previous
+    scf                     ; restore C=1 (cp above cleared it)
+    ld  a, #0x00
+    rra                     ; C was 1 from scf
     cp  a, #0x80
     jp  nz, test_fail
     jp  c,  test_fail       ; C=0

@@ -215,16 +215,16 @@ ldir_init:
     ld  de, #0x8200         ; dest
     ld  bc, #8              ; count
     .db 0xED, 0xB0          ; LDIR
-    ; BC must be 0 after LDIR
-    ld  a, b
-    or  a, c
-    jp  nz, test_fail
-    ; PV must be clear (BC=0 means no more to copy)
+    ; PV must be clear (BC=0 means no more to copy) — save flags before any ALU
     push af
     pop  bc
     ld   a, c
     and  a, #0x04
     jp   nz, test_fail
+    ; BC must be 0 after LDIR
+    ld  a, b
+    or  a, c
+    jp  nz, test_fail
 
     ; Verify copy
     ld  hl, #0x8200
