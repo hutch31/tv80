@@ -1,0 +1,3 @@
+# Ignore work products coming from C files in tests directory
+fib.asm
+hello.asm
