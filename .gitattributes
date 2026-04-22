@@ -1,0 +1,16 @@
+# Default: normalize line endings to LF in the repository
+* text=auto eol=lf
+
+# Scripts that must have LF to run in Linux containers
+*.py text eol=lf
+*.sh text eol=lf
+*.asm text eol=lf
+
+# Makefiles require tabs; enforce LF
+Makefile text eol=lf
+*.mk text eol=lf
+
+# Binary files — no line ending conversion
+*.vmem binary
+*.ihx binary
+*.v text eol=lf
