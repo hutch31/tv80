@@ -885,7 +885,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
 
     // 8'b11zzz100: CALL cc,nn
     }.elsewhen(io.IR(7,6) === 3.U && io.IR(2,0) === 4.U) {
-      when(io.IR(5) === 0.U || (Mode != 3).B) {
+      // Verilog: if (IR[5] == 1'b0 || Mode != 3) — Mode is compile-time
+      if (Mode != 3) {
         mcycles := 5.U
         when(io.MCycle(1)) {
           incPC := true.B
@@ -912,6 +913,37 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         when(io.MCycle(4)) {
           write := true.B
           call  := true.B
+        }
+      } else {
+        // Mode == 3: only decode when IR[5] == 0
+        when(!io.IR(5)) {
+          mcycles := 5.U
+          when(io.MCycle(1)) {
+            incPC := true.B
+            ldz   := true.B
+          }
+          when(io.MCycle(2)) {
+            incPC := true.B
+            ldw   := true.B
+            when(isCcTrue(io.F, io.IR(5,3))) {
+              incDec16  := 0xF.U
+              setAddrTo := aSP
+              tStates   := 4.U
+              setBusBTo := 0xD.U
+            }.otherwise {
+              mcycles := 3.U
+            }
+          }
+          when(io.MCycle(3)) {
+            write     := true.B
+            incDec16  := 0xF.U
+            setAddrTo := aSP
+            setBusBTo := 0xC.U
+          }
+          when(io.MCycle(4)) {
+            write := true.B
+            call  := true.B
+          }
         }
       }
 
@@ -1319,7 +1351,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       iMode := 1.U
 
     // IM 2
-    }.elsewhen(io.IR === 0x5E.U || io.IR === 0x7E.U) {  // 0x77 is also IM2 per Verilog (01110111)
+    }.elsewhen(io.IR === 0x5E.U || io.IR === 0x7E.U || io.IR === 0x77.U) {
       iMode := 2.U
 
     // 8'b01xx1010: ADC HL,ss
