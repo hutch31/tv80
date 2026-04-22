@@ -1,0 +1,6 @@
+[0m[[0m[0mdebug[0m] [0m[0m[zinc] IncrementalCompile -----------[0m
+[0m[[0m[0mdebug[0m] [0m[0mIncrementalCompile.incrementalCompile[0m
+[0m[[0m[0mdebug[0m] [0m[0mprevious = Stamps for: 17 products, 6 sources, 2 libraries[0m
+[0m[[0m[0mdebug[0m] [0m[0mcurrent source = Set(${BASE}/src/main/scala/tv80/Tv80Core.scala, ${BASE}/src/main/scala/tv80/Tv80Mcode.scala, ${BASE}/src/main/scala/tv80/Tv80s.scala, ${BASE}/src/main/scala/tv80/Tv80Reg.scala, ${BASE}/src/main/scala/tv80/Tv80n.scala, ${BASE}/src/main/scala/tv80/Tv80Alu.scala)[0m
+[0m[[0m[0mdebug[0m] [0m[0m> initialChanges = InitialChanges(Changes(added = Set(), removed = Set(), changed = Set(), unmodified = ...),Set(),Set(),API Changes: Set())[0m
+[0m[[0m[0mdebug[0m] [0m[0mNo changes[0m
