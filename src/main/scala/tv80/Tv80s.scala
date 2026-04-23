@@ -5,7 +5,6 @@ import chisel3.util._
 class Tv80s(Mode: Int = 0, T2Write: Int = 1, IOWait: Int = 1) extends Module {
   val io = IO(new Bundle {
     val reset_n = Input(Bool())
-    val clk     = Input(Clock())  // unused, using implicit clock
     val wait_n  = Input(Bool())
     val int_n   = Input(Bool())
     val nmi_n   = Input(Bool())

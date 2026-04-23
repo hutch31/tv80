@@ -96,6 +96,55 @@ verif/
   bugs/         ← Bug reports (one file per bug)
 ```
 
+### 3.5 Mapping Plan Test Names to Simulation `TESTNAME`
+
+The test names shown in Section 4 are plan-level names. In simulation, select tests by the Cocotb test function name.
+
+- `TESTNAME` is the selector value shown below.
+- In this Make-based flow, pass it as `TESTCASE=<TESTNAME>`.
+
+Example:
+
+```sh
+make -C verif/env SIM=verilator TOPLEVEL=tb_top MODULE=testbench TESTCASE=rst_01_reset_basic
+```
+
+Chisel variant example:
+
+```sh
+make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbench TESTCASE=rst_01_reset_basic
+```
+
+| Plan IDs | Plan Test Name(s) | Simulation `TESTNAME` (`TESTCASE` value) |
+|----------|-------------------|--------------------------------------------|
+| RST-01 | `reset_basic` | `rst_01_reset_basic` |
+| RST-02 | `reset_reapply` | `rst_02_reset_reapply` |
+| RST-03 | `reset_signals` | `rst_03_reset_signals` |
+| ALU-01..ALU-11 | `alu_add`, `alu_adc`, `alu_sub`, `alu_sbc`, `alu_inc_dec`, `alu_daa`, `alu_cp` | `alu_01_to_11_arithmetic` |
+| ALU-05..ALU-07 | `alu_add16`, `alu_adc16`, `alu_sbc16` | `alu_05_to_07_arith16` |
+| LOG-01..LOG-07 | `alu_and`, `alu_or`, `alu_xor`, `alu_cpl`, `alu_ccf`, `alu_scf`, `alu_neg` | `log_01_to_07_logic` |
+| ROT-01..ROT-05 | `rlca_rrca`, `rla_rra`, `rl_rr_rrc_rlc`, `sla_sra_srl`, `rld_rrd` | `rot_01_to_05_rotate` |
+| BIT-01..BIT-03 | `bit_test`, `bit_set`, `bit_res` | `bit_01_to_03_bit_ops` |
+| LD-01..LD-06 | `load_r_r`, `load_r_n`, `load_r_hl`, `load_hl_r`, `load_r_ix_iy`, `load_ix_iy_r` | `ld_01_to_06_load_reg` |
+| LD-07..LD-14 | `load_a_indirect`, `load_indirect_a`, `load_rr_nn`, `load_hl_nn_indirect`, `load_rr_nn_indirect`, `load_sp_hl`, `load_i_r`, `load_block` | `ld_07_to_14_load_mem` |
+| JMP-01..JMP-08 | `jump_unconditional`, `jump_relative`, `jump_conditional`, `djnz`, `call_ret`, `call_ret_conditional`, `rst`, `retn_reti` | `jmp_01_to_08_jumps` |
+| IO-01..IO-03 | `in_out_basic`, `in_out_c`, `io_block` | `io_01_to_03_io_ops` |
+| STK-01..STK-02 | `push_pop`, `ex_sp` | `stk_01_02_stack` |
+| EXC-01..EXC-03 | `ex_af`, `exx`, `ex_de_hl` | `exc_01_to_03_exchange` |
+| MISC-01..MISC-03 | `nop`, `halt`, `di_ei` | `misc_01_to_03_misc` |
+| INT-01 | `int_mode0` | `int_01_mode0` |
+| INT-02 | `int_mode1` | `int_02_mode1` |
+| INT-03 | `int_mode2` | `int_03_mode2` |
+| NMI-01..NMI-05 | `nmi_basic`, `nmi_retn`, `nmi_during_halt`, `nmi_priority`, `nmi_opcode_trigger` | `nmi_01_to_05_nmi` |
+| BUS-01 | `busrq_basic` | `bus_01_busrq_basic` |
+| BUS-02 | `busrq_release` | `bus_02_busrq_release` |
+| WAIT-01 | `wait_state` | `wait_01_memory_wait` |
+| WAIT-02 | `wait_io` | `wait_02_io_wait` |
+| FUNC-01 | `hello_world` | `func_01_hello_world` |
+| FUNC-02 | `fibonacci` | `func_02_fibonacci` |
+| FUNC-05 | `alu_optest` | `func_05_alu_optest` |
+| FUNC-06 | `load_optest` | `func_06_load_optest` |
+
 ---
 
 ## 4. Test Groups and Test Cases
@@ -337,4 +386,5 @@ Each report contains:
 
 | Date | Author | Description |
 |------|--------|-------------|
+| 2026-04-23 | Copilot Verification Agent | Added mapping from plan test names/IDs to simulation `TESTNAME` (`TESTCASE`) selectors |
 | 2026-04-19 | Copilot Verification Agent | Initial test plan created |

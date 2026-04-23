@@ -4,6 +4,7 @@
 #   make              – run all tests
 #   make TESTCASE=rst_01_reset_basic – run a single test
 #   make coverage     – generate coverage report after test run
+#   make RTL_VARIANT=chisel – use Chisel-generated RTL (rtl/generated)
 #
 # Requirements:
 #   - cocotb  1.8.x  (pip install cocotb==1.8.1)
@@ -18,15 +19,34 @@ TOPLEVEL_LANG  ?= verilog
 
 REPO_ROOT := $(abspath ../..)
 RTL_DIR   := $(REPO_ROOT)/rtl/core
+RTL_GEN_DIR := $(REPO_ROOT)/rtl/generated
 TESTS_DIR := $(abspath ../tests)
+RTL_VARIANT ?= original
 
-# All RTL source files (order matters: tv80s instantiates tv80_core etc.)
+# Optional alias: allow TESTNAME=<cocotb test function> in addition to TESTCASE
+ifdef TESTNAME
+TESTCASE ?= $(TESTNAME)
+endif
+
+# All RTL source files
 VERILOG_SOURCES  = $(abspath tb_top.v)
+
+ifeq ($(RTL_VARIANT),chisel)
+VERILOG_SOURCES += $(abspath tv80s_chisel_compat.sv)
+VERILOG_SOURCES += $(RTL_GEN_DIR)/Tv80s.sv
+VERILOG_SOURCES += $(RTL_GEN_DIR)/Tv80Core.sv
+VERILOG_SOURCES += $(RTL_GEN_DIR)/Tv80Mcode.sv
+VERILOG_SOURCES += $(RTL_GEN_DIR)/Tv80Alu.sv
+VERILOG_SOURCES += $(RTL_GEN_DIR)/Tv80Reg.sv
+EXTRA_ARGS += -DTV80_USE_CHISEL
+else
+# order matters: tv80s instantiates tv80_core etc.
 VERILOG_SOURCES += $(RTL_DIR)/tv80s.v
 VERILOG_SOURCES += $(RTL_DIR)/tv80_core.v
 VERILOG_SOURCES += $(RTL_DIR)/tv80_mcode.v
 VERILOG_SOURCES += $(RTL_DIR)/tv80_alu.v
 VERILOG_SOURCES += $(RTL_DIR)/tv80_reg.v
+endif
 
 TOPLEVEL = tb_top
 MODULE   = testbench
