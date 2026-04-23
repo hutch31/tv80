@@ -80,7 +80,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   val mcycles_r = Reg(UInt(3.W))
   val dout_r    = Reg(UInt(8.W))
   val ACC       = Reg(UInt(8.W))
-  val F         = Reg(UInt(8.W))
+  val F         = Reg(Vec(8, Bool()))
   val Ap        = Reg(UInt(8.W))
   val Fp        = Reg(UInt(8.W))
   val I         = Reg(UInt(8.W))
@@ -178,7 +178,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   i_mcode.io.IR       := IR
   i_mcode.io.ISet     := ISet
   i_mcode.io.MCycle   := mcycle
-  i_mcode.io.F        := F
+  i_mcode.io.F        := F.asUInt
   i_mcode.io.NMICycle := NMICycle
   i_mcode.io.IntCycle := IntCycle
   mcycles_d   := i_mcode.io.MCycles
@@ -237,9 +237,21 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   i_alu.io.ISet    := ISet
   i_alu.io.BusA    := BusA
   i_alu.io.BusB    := BusB
-  i_alu.io.F_In    := F
+  i_alu.io.F_In    := F.asUInt
   val ALU_Q = i_alu.io.Q
   val F_Out = i_alu.io.F_Out
+
+  // Combinational signal declarations (must precede i_reg which references them)
+  val ClkEn_w           = Wire(Bool())
+  val T_Res_w           = Wire(Bool())
+  val NextIs_XY_Fetch_w = Wire(Bool())
+  val Save_Mux_w        = Wire(UInt(8.W))
+  val DI_Reg            = Wire(UInt(8.W))
+  val last_mcycle       = Wire(Bool())
+  val last_tstate       = Wire(Bool())
+  val Auto_Wait_w       = Wire(Bool())
+  val RegWEH_w          = Wire(Bool())
+  val RegWEL_w          = Wire(Bool())
 
   // Register file instance
   val RegAddrA  = Wire(UInt(3.W))
@@ -262,18 +274,6 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   RegBusA := Cat(i_reg.io.DOAH, i_reg.io.DOAL)
   RegBusB := Cat(i_reg.io.DOBH, i_reg.io.DOBL)
   RegBusC := Cat(i_reg.io.DOCH, i_reg.io.DOCL)
-
-  // Combinational signals
-  val ClkEn_w     = Wire(Bool())
-  val T_Res_w     = Wire(Bool())
-  val NextIs_XY_Fetch_w = Wire(Bool())
-  val Save_Mux_w  = Wire(UInt(8.W))
-  val DI_Reg      = Wire(UInt(8.W))
-  val last_mcycle = Wire(Bool())
-  val last_tstate = Wire(Bool())
-  val Auto_Wait_w = Wire(Bool())
-  val RegWEH_w    = Wire(Bool())
-  val RegWEL_w    = Wire(Bool())
 
   // Combinational logic
   ClkEn_w := io.cen && !BusAck
@@ -411,7 +411,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
     mcycles_r := 0.U
     dout_r    := 0.U
     ACC       := 0xFF.U
-    F         := 0xFF.U
+    F         := VecInit(0xFF.U.asBools)
     Ap        := 0xFF.U
     Fp        := 0xFF.U
     I         := 0.U
@@ -591,7 +591,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
         when(LDSPHL) { SP := RegBusC }
         when(ExchangeAF) {
           Ap  := ACC;  ACC := Ap
-          Fp  := F;    F   := Fp
+          Fp  := F.asUInt;  F := VecInit(Fp.asBools)
         }
         when(ExchangeRS) { Alternate := !Alternate }
       } // else (not M1 t1..t3)
@@ -633,7 +633,8 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
           F(7) := F_Out(7)
           when(!PreserveC_r) { F(4) := F_Out(4) }
         } else {
-          F(7, 1) := F_Out(7, 1)
+          F(7) := F_Out(7); F(6) := F_Out(6); F(5) := F_Out(5)
+          F(4) := F_Out(4); F(3) := F_Out(3); F(2) := F_Out(2); F(1) := F_Out(1)
           when(!PreserveC_r) { F(Flag_C) := F_Out(0) }
         }
       }
@@ -675,7 +676,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
           is("b10110".U) { dout_r := Save_Mux_w }
           is("b11000".U) { SP    := Cat(SP(15, 8), Save_Mux_w) }
           is("b11001".U) { SP    := Cat(Save_Mux_w, SP(7, 0)) }
-          is("b11011".U) { F     := Save_Mux_w }
+          is("b11011".U) { F     := VecInit(Save_Mux_w.asBools) }
         }
       }
 
@@ -734,7 +735,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
       is(8.U)  { BusB := SP(7, 0) }
       is(9.U)  { BusB := SP(15, 8) }
       is(10.U) { BusB := 1.U }
-      is(11.U) { BusB := F }
+      is(11.U) { BusB := F.asUInt }
       is(12.U) { BusB := PC(7, 0) }
       is(13.U) { BusB := PC(15, 8) }
       is(14.U) { BusB := 0.U }
