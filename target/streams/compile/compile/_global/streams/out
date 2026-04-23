@@ -1,0 +1,6 @@
+[0m[[0m[31merror[0m] [0m[0m/home/runner/work/tv80/tv80/src/main/scala/tv80/Tv80Core.scala:714:41: type mismatch;[0m
+[0m[[0m[31merror[0m] [0m[0m found   : Boolean[0m
+[0m[[0m[31merror[0m] [0m[0m required: chisel3.Bool[0m
+[0m[[0m[31merror[0m] [0m[0m      when(I_DJNZ && Save_ALU_r && Mode < 2) {[0m
+[0m[[0m[31merror[0m] [0m[0m                                        ^[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m
