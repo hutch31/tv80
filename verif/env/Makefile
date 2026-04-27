@@ -81,9 +81,17 @@ endif
 
 coverage: sim
 	@echo "=== Generating coverage report ==="
+	@if [ -f coverage.dat ]; then \
+		COV_DATA=coverage.dat; \
+	elif [ -f sim_build/coverage.dat ]; then \
+		COV_DATA=sim_build/coverage.dat; \
+	else \
+		echo "%Error: Can't read coverage.dat or sim_build/coverage.dat"; \
+		exit 1; \
+	fi; \
 	verilator_coverage --annotate coverage_annotated \
 	    --annotate-min 1 \
-	    sim_build/coverage.dat || true
+	    $$COV_DATA
 	@echo "Coverage report written to coverage_annotated/"
 
 # Build all test programs (verif + func) before running simulations.
