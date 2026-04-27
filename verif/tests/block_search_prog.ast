@@ -1,0 +1,177 @@
+; block_search_prog.ast – FUNC-07
+;
+; Functional integration test for block-compare (search) instructions.
+; Uses CPIR to search a 16-byte array for a target byte and CPDR to search
+; backwards.  Verifies correct index return for both found and not-found cases.
+;
+; Tests:
+;   1. Forward search (CPIR): target found at index 5
+;   2. Forward search (CPIR): target not found (BC exhausted)
+;   3. Backward search (CPDR): target found at index 2
+;   4. Backward search (CPDR): target not found
+;
+; Output goes to MSG_PORT (0x81) for pass messages; final PASS/FAIL via
+; SIM_CTL_PORT (0x80).
+
+    .module block_search_prog
+
+_sim_ctl_port = 0x80
+_msg_port     = 0x81
+_timeout_port = 0x82
+
+ARRAY_BASE = 0x8400         ; 16-byte test array in RAM
+ARRAY_LEN  = 16
+
+    .area PROGMEM (ABS)
+    .org 0x0000
+    jp  main
+
+    .org 0x0066             ; NMI vector (not used; just in case)
+    reti
+
+    .org 0x0100
+
+;------------------------------------------------------------------
+; print_pass: emit "PASS" + newline to MSG_PORT
+;------------------------------------------------------------------
+print_pass:
+    ld  a, #'P'
+    out (_msg_port), a
+    ld  a, #'A'
+    out (_msg_port), a
+    ld  a, #'S'
+    out (_msg_port), a
+    ld  a, #'S'
+    out (_msg_port), a
+    ld  a, #0x0A
+    out (_msg_port), a
+    ret
+
+;------------------------------------------------------------------
+; heartbeat
+;------------------------------------------------------------------
+heartbeat:
+    push af
+    ld   a, #0x02
+    out  (_timeout_port), a
+    ld   a, #0x01
+    out  (_timeout_port), a
+    pop  af
+    ret
+
+;------------------------------------------------------------------
+; init_array: fill ARRAY_BASE[0..15] with values 0,1,2,..,0x0F
+; then plant special values at specific positions:
+;   [5] = 0xBB (forward search target)
+;   [2] = 0xCC (backward search target)
+;------------------------------------------------------------------
+init_array:
+    ld  hl, #ARRAY_BASE
+    ld  b,  #ARRAY_LEN
+    ld  c,  #0x00
+init_loop:
+    ld  (hl), c
+    inc hl
+    inc c
+    djnz init_loop
+    ; Plant search targets
+    ld  hl, #ARRAY_BASE+5
+    ld  (hl), #0xBB
+    ld  hl, #ARRAY_BASE+2
+    ld  (hl), #0xCC
+    ret
+
+main:
+    ld  sp, #0xFFFF
+    call init_array
+
+    ;========================================================
+    ; Test 1: CPIR — forward search, target 0xBB at index 5
+    ;   A=0xBB, HL=ARRAY_BASE, BC=ARRAY_LEN
+    ;   Expected: Z=1, HL=ARRAY_BASE+6 (one past match), BC=10
+    ;========================================================
+    call heartbeat
+    ld   hl, #ARRAY_BASE
+    ld   bc, #ARRAY_LEN
+    ld   a, #0xBB
+    .db 0xED, 0xB1          ; CPIR
+    jp  nz, test_fail       ; Z=1 (found)
+    ; HL should be ARRAY_BASE+6
+    ld  a, l
+    cp  a, #((ARRAY_BASE+6) & 0xFF)
+    jp  nz, test_fail
+    ; BC should be 10 (=16-5-1)
+    ld  a, c
+    cp  a, #10
+    jp  nz, test_fail
+    call print_pass
+
+    ;========================================================
+    ; Test 2: CPIR — target 0xFF not in array
+    ;   A=0xFF, HL=ARRAY_BASE, BC=ARRAY_LEN
+    ;   Expected: Z=0, P/V=0 (BC exhausted)
+    ;========================================================
+    call heartbeat
+    call init_array
+    ld   hl, #ARRAY_BASE
+    ld   bc, #ARRAY_LEN
+    ld   a, #0xFF
+    .db 0xED, 0xB1          ; CPIR
+    jp  z,  test_fail       ; Z=0 (not found)
+    push af
+    pop  bc
+    ld  a, c
+    and a, #0x04            ; P/V bit
+    jp  nz, test_fail       ; P/V=0 (BC=0)
+    call print_pass
+
+    ;========================================================
+    ; Test 3: CPDR — backward search, target 0xCC at index 2
+    ;   A=0xCC, HL=ARRAY_BASE+15 (end of array), BC=ARRAY_LEN
+    ;   ARRAY_BASE[2]=0xCC, so iteration count = 16-2 = 14
+    ;   BC after = ARRAY_LEN - 14 = 2, so P/V=1 (BC=2 != 0)
+    ;   HL after = ARRAY_BASE+1 (one before match)
+    ;========================================================
+    call heartbeat
+    call init_array
+    ld   hl, #ARRAY_BASE+15
+    ld   bc, #ARRAY_LEN
+    ld   a, #0xCC
+    .db 0xED, 0xB9          ; CPDR
+    jp  nz, test_fail       ; Z=1 (found)
+    ; HL should be ARRAY_BASE+1
+    ld  a, l
+    cp  a, #((ARRAY_BASE+1) & 0xFF)
+    jp  nz, test_fail
+    ; BC should be 2
+    ld  a, c
+    cp  a, #2
+    jp  nz, test_fail
+    call print_pass
+
+    ;========================================================
+    ; Test 4: CPDR — target 0xFF not in array
+    ;========================================================
+    call heartbeat
+    call init_array
+    ld   hl, #ARRAY_BASE+15
+    ld   bc, #ARRAY_LEN
+    ld   a, #0xFF
+    .db 0xED, 0xB9          ; CPDR
+    jp  z,  test_fail       ; Z=0 (not found)
+    push af
+    pop  bc
+    ld  a, c
+    and a, #0x04            ; P/V bit
+    jp  nz, test_fail       ; P/V=0 (BC=0)
+    call print_pass
+
+    ;--- All tests passed ---
+    ld  a, #0x01
+    out (_sim_ctl_port), a
+    halt
+
+test_fail:
+    ld  a, #0x02
+    out (_sim_ctl_port), a
+    halt

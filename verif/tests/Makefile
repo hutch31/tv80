@@ -47,14 +47,20 @@ VERIF_TESTS := \
     interrupt_im2   \
     nmi_ops         \
     busrq_test      \
-    wait_test
+	wait_test       \
+	daa_carry       \
+	bit_ix_iy       \
+	load_sp_hl      \
+	load_ix_iy_nn   \
+	block_search    \
+	ex_af_shadow
 
 VERIF_VMEM := $(addsuffix .vmem, $(VERIF_TESTS))
 
 # -----------------------------------------------------------------------
 # Functional tests – built from ../../tests/ source
 # -----------------------------------------------------------------------
-FUNC_TESTS_AST := alu_optest load_optest otir
+FUNC_TESTS_AST := alu_optest load_optest otir block_search_prog
 FUNC_TESTS_ASM := basic_int
 FUNC_TESTS_C   := hello fib
 

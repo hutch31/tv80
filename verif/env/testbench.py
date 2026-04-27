@@ -475,6 +475,12 @@ async def rot_01_to_05_rotate(dut):
     await run_vmem_test(dut, "alu_rotate")
 
 
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def alu_12_daa_carry(dut):
+    """ALU-12: DAA with carry/half-carry combinations - exercises daaQ0 and daaQ1 ALU paths."""
+    await run_vmem_test(dut, "daa_carry")
+
+
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
 # ║              4.5  ALU - Bit Operations                    ║
@@ -485,6 +491,12 @@ async def rot_01_to_05_rotate(dut):
 async def bit_01_to_03_bit_ops(dut):
     """BIT-01..03: BIT, SET, RES instructions."""
     await run_vmem_test(dut, "bit_ops")
+
+
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def bit_04_bit_ix_iy(dut):
+    """BIT-04: BIT/SET/RES on (IX+d)/(IY+d) - exercises Pre_XY_F_M and mcycle[5]/[6] paths."""
+    await run_vmem_test(dut, "bit_ix_iy")
 
 
 # ===========================================================================
@@ -503,6 +515,18 @@ async def ld_01_to_06_load_reg(dut):
 async def ld_07_to_14_load_mem(dut):
     """LD-07..14: Memory indirect loads, 16-bit loads, block transfers."""
     await run_vmem_test(dut, "load_mem")
+
+
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def ld_15_load_sp_hl(dut):
+    """LD-15: Dedicated LD SP,HL / LD SP,IX / LD SP,IY test."""
+    await run_vmem_test(dut, "load_sp_hl")
+
+
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def ld_16_load_ix_iy_nn(dut):
+    """LD-16: LD (IX+d),n and 6-M-cycle IX/IY indirect load/store instructions."""
+    await run_vmem_test(dut, "load_ix_iy_nn")
 
 
 # ===========================================================================
@@ -553,6 +577,12 @@ async def exc_01_to_03_exchange(dut):
     await run_vmem_test(dut, "exchange_ops")
 
 
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def exc_04_ex_af_shadow(dut):
+    """EXC-04: EX AF,AF' flag shadow - exercises F_6/F_7 shadow flag restore paths."""
+    await run_vmem_test(dut, "ex_af_shadow")
+
+
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
 # ║           4.11  Miscellaneous Instructions                ║
@@ -601,6 +631,18 @@ async def int_03_mode2(dut):
 async def nmi_01_to_05_nmi(dut):
     """NMI-01..05: NMI basic, RETN, NMI during HALT, priority, opcode trigger."""
     await run_vmem_test(dut, "nmi_ops")
+
+
+# ===========================================================================
+# ╔═══════════════════════════════════════════════════════════╗
+# ║         4.13b  Block Search Instructions                  ║
+# ╚═══════════════════════════════════════════════════════════╝
+# ===========================================================================
+
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def blk_01_02_block_search(dut):
+    """BLK-01..02: CPI/CPD/CPIR/CPDR block compare - exercises io_I_BC microcode path."""
+    await run_vmem_test(dut, "block_search")
 
 
 # ===========================================================================
@@ -786,4 +828,10 @@ async def func_05_alu_optest(dut):
 async def func_06_load_optest(dut):
     """FUNC-06: Run tests/load_optest.ast - comprehensive load self-test."""
     await run_vmem_test(dut, "load_optest", timeout=2_000_000, max_timeout=1_500_000)
+
+
+@cocotb.test(timeout_time=30_000_000, timeout_unit="ns")
+async def func_07_block_search(dut):
+    """FUNC-07: Block search functional test using CPIR/CPDR on memory array."""
+    await run_vmem_test(dut, "block_search_prog", timeout=25_000_000, max_timeout=3_000)
 

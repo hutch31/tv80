@@ -116,7 +116,18 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 ```
 
 | Plan IDs | Plan Test Name(s) | Simulation `TESTNAME` (`TESTCASE` value) |
-|----------|-------------------|--------------------------------------------|
+|----------|-------------------|--------------------------------------------|  
+_Coverage-gap tests added after Chisel regression (2026-04-27):_
+
+| ALU-12 | `daa_bcd_carry` | `alu_12_daa_carry` |
+| BIT-04 | `bit_ix_iy` | `bit_04_bit_ix_iy` |
+| LD-15 | `load_sp_hl_direct` | `ld_15_load_sp_hl` |
+| LD-16 | `load_ix_iy_nn_indirect` | `ld_16_load_ix_iy_nn` |
+| BLK-01..BLK-02 | `block_compare`, `block_compare_repeat` | `blk_01_02_block_search` |
+| EXC-04 | `ex_af_flag_shadow` | `exc_04_ex_af_shadow` |
+| FUNC-07 | `block_search_prog` | `func_07_block_search` |
+
+_Existing plan tests:_
 | RST-01 | `reset_basic` | `rst_01_reset_basic` |
 | RST-02 | `reset_reapply` | `rst_02_reset_reapply` |
 | RST-03 | `reset_signals` | `rst_03_reset_signals` |
@@ -178,6 +189,7 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 | ALU-09 | `alu_inc_dec16` | INC rr, DEC rr; no flags affected. | 16-bit registers increment/decrement correctly |
 | ALU-10 | `alu_daa` | DAA after ADD and SUB; BCD adjustment correct. | Result is valid BCD; C, H, Z, S, P flags correct |
 | ALU-11 | `alu_cp` | CP r / CP n; result discarded, flags set. | Flags as for SUB; A unchanged |
+| ALU-12 | `daa_bcd_carry` | DAA after ADD/ADC producing half-carry (H=1) or full carry (C=1); DAA after SUB/SBC with borrow; exercises both the `daaQ1` (upper-nibble carry correction) and `daaQ0` (pass-through) code paths in the ALU. Boundary cases: result in range 0x00–0x99, >0x99, lower nibble >9. | Correct BCD result in A; C, H, Z, S, P/V flags match Z80 reference table for all carry/half-carry combinations |
 
 ---
 
@@ -214,6 +226,7 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 | BIT-01 | `bit_test` | BIT b,r / BIT b,(HL) for all bits 0–7; Z flag reflects complement of tested bit. | Z, H=1, N=0 correct |
 | BIT-02 | `bit_set` | SET b,r / SET b,(HL) for all bits 0–7. | Correct bit set; other bits unchanged |
 | BIT-03 | `bit_res` | RES b,r / RES b,(HL) for all bits 0–7. | Correct bit cleared; other bits unchanged |
+| BIT-04 | `bit_ix_iy` | BIT b,(IX+d) / BIT b,(IY+d) / SET b,(IX+d) / SET b,(IY+d) / RES b,(IX+d) / RES b,(IY+d) for bits 0, 3, 7; uses DDCB/FDCB 4-byte prefix sequence. Exercises `Pre_XY_F_M` flag-mode tracking and the CB-prefixed IX/IY machine-cycle path in the core. | Correct bit operation at indexed address; Z, H flags correct for BIT; target memory updated for SET/RES |
 
 ---
 
@@ -237,6 +250,8 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 | LD-12 | `load_sp_hl` | LD SP,HL; LD SP,IX; LD SP,IY. | SP updated correctly |
 | LD-13 | `load_i_r` | LD I,A / LD A,I; LD R,A / LD A,R (ED prefix). | Special registers loaded; IFF2 copied to P on LD A,I/R |
 | LD-14 | `load_block` | LDI, LDD, LDIR, LDDR; block transfer. | BC decremented; DE/HL incremented/decremented; P/V flag; BC=0 check |
+| LD-15 | `load_sp_hl_direct` | Dedicated test for `LD SP,HL`; `LD SP,IX`; `LD SP,IY`. Exercises the `LDSPHL` microcode signal and the `SP <= RegBusC` update path in the core. | SP contains value from HL/IX/IY after each instruction; no flags affected |
+| LD-16 | `load_ix_iy_nn_indirect` | `LD IX,(nn)` / `LD (nn),IX` / `LD IY,(nn)` / `LD (nn),IY` (ED-prefix 4-byte forms); also `LD (IX+d),n` / `LD (IY+d),n` (DDCB immediate, 4-byte). These require 6 machine cycles and exercise the `mcycle[5]` prefix-detection path and the `mcycle[6]` `IR`/`ISet` latch paths. | Correct data in memory / register pair; TmpAddr latch sequence correct |
 
 ---
 
@@ -281,6 +296,7 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 | EXC-01 | `ex_af` | EX AF,AF'; alternate AF visible after exchange. | Both banks toggled correctly |
 | EXC-02 | `exx` | EXX; alternate BC, DE, HL banks. | Both banks toggled correctly |
 | EXC-03 | `ex_de_hl` | EX DE,HL. | DE and HL swapped |
+| EXC-04 | `ex_af_flag_shadow` | Load distinct values into both AF and the shadow AF'; alternate via `EX AF,AF'` several times; verify both `F_6` (undocumented Y flag, bit 5) and `F_7` (S flag) are preserved and restored correctly in the shadow register (`Fp`). Also exercises the `ACC <= Ap` and flag shadow-restore T-state path in the core. | AF and AF' swap correctly on each EX; flag bits 6 and 7 match the expected shadow value after each exchange |
 
 ---
 
@@ -319,6 +335,17 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 
 ---
 
+### 4.13b Block Search Instructions
+
+**Purpose:** Verify the block search instructions (CPI/CPD/CPIR/CPDR) that compare A with memory and use BC as a counter. These exercise the `io_I_BC` microcode signal path in `Tv80Mcode`.
+
+| ID | Test Name | Description | Pass Criteria |
+|----|-----------|-------------|---------------|
+| BLK-01 | `block_compare` | CPI — compare A with (HL), increment HL, decrement BC; Z flag set when A==(HL), P/V set when BC≠0 after decrement. CPD — same but HL decremented. Test with match and no-match cases. | Z, P/V, H, N flags correct; BC and HL updated; A unchanged |
+| BLK-02 | `block_compare_repeat` | CPIR — repeat CPI until A==(HL) (Z=1) or BC=0; CPDR — same decrementing direction. Test early-exit on match and full-loop termination when BC reaches 0. | Loop terminates at correct iteration; PC advances past instruction; BC=0 or Z=1 at exit |
+
+---
+
 ### 4.14 Bus Request / Bus Acknowledge
 
 | ID | Test Name | Description | Pass Criteria |
@@ -347,6 +374,7 @@ make -C verif/env RTL_VARIANT=chisel SIM=verilator TOPLEVEL=tb_top MODULE=testbe
 | ~~FUNC-04~~ | ~~`bintr`~~ | ~~Run `tests/bintr.asm`~~; interrupt/NMI coverage provided by directed tests int_01–03 and nmi_01–05. | Removed — covered by directed tests |
 | FUNC-05 | `alu_optest` | Run `tests/alu_optest.ast`; comprehensive ALU self-test. | Test pass written |
 | FUNC-06 | `load_optest` | Run `tests/load_optest.ast`; comprehensive load self-test. | Test pass written |
+| FUNC-07 | `block_search_prog` | Run a C/assembly program that uses CPIR to search a memory array for a target byte, and CPDR to search backwards; verifies block-search loop exit conditions in a real program context. | Search returns correct index for found and not-found cases |
 | ~~FUNC-07~~ | ~~`otir_test`~~ | ~~Run `tests/otir.ast`~~; OTIR/OTDR/INIR/INDR coverage provided by directed test io_01_to_03 (IO-03). | Removed — covered by directed tests |
 
 ---
@@ -367,6 +395,21 @@ Known hard-to-cover areas to target explicitly:
 - DAA after both addition and subtraction with various H/C combinations.
 - Block instructions with zero-iteration case (BC=0 on entry to LDIR/LDDR/INIR/etc.).
 
+Gaps identified from Chisel variant regression (96% line coverage, 2026-04-27):
+
+| Gap | Uncovered construct | New test |
+|-----|--------------------|---------|
+| `daaQ1` / `daaQ0` in `Tv80Alu` | DAA upper-nibble carry correction path | ALU-12 `alu_12_daa_carry` |
+| `io_I_BC` in `Tv80Mcode` | Block-search (CPI/CPD/CPIR/CPDR) microcode | BLK-01..02 `blk_01_02_block_search` |
+| `Pre_XY_F_M` in `Tv80Core` | DDCB/FDCB prefix flag-mode tracking | BIT-04 `bit_04_bit_ix_iy` |
+| `IR <= io_dinst` at `mcycle[6]` | 6-M-cycle IX/IY immediate instruction | LD-16 `ld_16_load_ix_iy_nn` |
+| `ISet <= 2'h1` at `mcycle[5]` | DD/FD prefix latch on M5 | LD-16 `ld_16_load_ix_iy_nn` |
+| `TmpAddr` paths (`_GEN_52`, `_GEN_18`) | Specific 16-bit address latch sub-cycles | LD-16 `ld_16_load_ix_iy_nn` |
+| `ExchangeAF` / `ACC <= Ap` in T2 | EX AF,AF' executed in short-cycle context | EXC-04 `exc_04_ex_af_shadow` |
+| `F_6 <= Fp[6]` / `F_7 <= Fp[7]` | Shadow flag register restore | EXC-04 `exc_04_ex_af_shadow` |
+| `SP <= RegBusC` (`LDSPHL`) | LD SP,HL microcode path | LD-15 `ld_15_load_sp_hl` |
+| `SP <= _SP16_T` in non-bus-grant cycle | SP decrement in specific T-state branch | LD-15 `ld_15_load_sp_hl` |
+
 ---
 
 ## 6. Bug Reporting
@@ -386,5 +429,6 @@ Each report contains:
 
 | Date | Author | Description |
 |------|--------|-------------|
+| 2026-04-27 | Copilot Verification Agent | Added ALU-12, BIT-04, LD-15, LD-16, BLK-01..02, EXC-04, FUNC-07 to close coverage gaps found in Chisel variant regression (96% → target 99%) |
 | 2026-04-23 | Copilot Verification Agent | Added mapping from plan test names/IDs to simulation `TESTNAME` (`TESTCASE`) selectors |
 | 2026-04-19 | Copilot Verification Agent | Initial test plan created |
