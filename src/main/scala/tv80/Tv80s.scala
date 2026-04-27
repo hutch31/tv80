@@ -4,7 +4,6 @@ import chisel3.util._
 
 class Tv80s(Mode: Int = 0, T2Write: Int = 1, IOWait: Int = 1) extends Module {
   val io = IO(new Bundle {
-    val reset_n = Input(Bool())
     val wait_n  = Input(Bool())
     val int_n   = Input(Bool())
     val nmi_n   = Input(Bool())
@@ -25,7 +24,6 @@ class Tv80s(Mode: Int = 0, T2Write: Int = 1, IOWait: Int = 1) extends Module {
   val cen = true.B
 
   val core = Module(new Tv80Core(Mode, IOWait))
-  core.io.reset_n := io.reset_n
   core.io.cen     := cen
   core.io.wait_n  := io.wait_n
   core.io.int_n   := io.int_n
@@ -47,56 +45,48 @@ class Tv80s(Mode: Int = 0, T2Write: Int = 1, IOWait: Int = 1) extends Module {
   val mcycle      = core.io.mc
   val tstate      = core.io.ts
 
-  val mreq_n = Reg(Bool())
-  val iorq_n = Reg(Bool())
-  val rd_n   = Reg(Bool())
-  val wr_n   = Reg(Bool())
-  val di_reg = Reg(UInt(8.W))
+  val mreq_n = RegInit(true.B)
+  val iorq_n = RegInit(true.B)
+  val rd_n   = RegInit(true.B)
+  val wr_n   = RegInit(true.B)
+  val di_reg = RegInit(0.U(8.W))
 
   core.io.di := di_reg
 
-  when(!io.reset_n) {
-    rd_n   := true.B
-    wr_n   := true.B
-    iorq_n := true.B
-    mreq_n := true.B
-    di_reg := 0.U
-  }.otherwise {
-    rd_n   := true.B
-    wr_n   := true.B
-    iorq_n := true.B
-    mreq_n := true.B
+  rd_n   := true.B
+  wr_n   := true.B
+  iorq_n := true.B
+  mreq_n := true.B
 
-    when(mcycle(0)) {
-      when(tstate(1) || (tstate(2) && !io.wait_n)) {
-        rd_n   := !intcycle_n
-        mreq_n := !intcycle_n
-        iorq_n := intcycle_n
-      }
-    }.otherwise {
-      when((tstate(1) || (tstate(2) && !io.wait_n)) && !no_read && !write) {
-        rd_n   := false.B
+  when(mcycle(0)) {
+    when(tstate(1) || (tstate(2) && !io.wait_n)) {
+      rd_n   := !intcycle_n
+      mreq_n := !intcycle_n
+      iorq_n := intcycle_n
+    }
+  }.otherwise {
+    when((tstate(1) || (tstate(2) && !io.wait_n)) && !no_read && !write) {
+      rd_n   := false.B
+      iorq_n := !iorq
+      mreq_n := iorq
+    }
+    if (T2Write == 0) {
+      when(tstate(2) && write) {
+        wr_n   := false.B
         iorq_n := !iorq
         mreq_n := iorq
       }
-      if (T2Write == 0) {
-        when(tstate(2) && write) {
-          wr_n   := false.B
-          iorq_n := !iorq
-          mreq_n := iorq
-        }
-      } else {
-        when((tstate(1) || (tstate(2) && !io.wait_n)) && write) {
-          wr_n   := false.B
-          iorq_n := !iorq
-          mreq_n := iorq
-        }
+    } else {
+      when((tstate(1) || (tstate(2) && !io.wait_n)) && write) {
+        wr_n   := false.B
+        iorq_n := !iorq
+        mreq_n := iorq
       }
     }
+  }
 
-    when(tstate(2) && io.wait_n && !write && !no_read) {
-      di_reg := io.di
-    }
+  when(tstate(2) && io.wait_n && !write && !no_read) {
+    di_reg := io.di
   }
 
   io.mreq_n := mreq_n

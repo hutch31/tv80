@@ -71,11 +71,11 @@ module tb_top (
     // io_cs: asserted during IO read cycles (iorq_n=0, rd_n=0)
     assign io_cs   = !iorq_n & !rd_n;
 
-    // int_ack: asserted during INT-acknowledge cycles (m1_n=0, iorq_n=0)
-    // and only when an interrupt request is actually pending. The Chisel
-    // variant can transiently present M1/IORQ during normal startup fetch
-    // sequencing, so avoid sourcing io_din unless INT is active.
-    assign int_ack = !m1_n & !iorq_n & !int_n;
+    // int_ack: asserted during INT-acknowledge cycles.
+    // On Z80 this bus phase is M1+IORQ with neither RD nor WR asserted.
+    // Qualifying on the bus phase avoids missing ACK if int_n is released
+    // in the same sampled cycle by the Python IO model.
+    assign int_ack = !m1_n & !iorq_n & rd_n & wr_n;
 
     // -----------------------------------------------------------------------
     // Data bus mux (replaces tri-state bus)

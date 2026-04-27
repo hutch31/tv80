@@ -13,7 +13,6 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   val Flag_S = 7
 
   val io = IO(new Bundle {
-    val reset_n     = Input(Bool())
     val cen         = Input(Bool())
     val wait_n      = Input(Bool())
     val int_n       = Input(Bool())
@@ -69,61 +68,61 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
     ))
   }
 
-  // All registers (manual async reset)
-  val PC        = Reg(UInt(16.W))
-  val A_reg     = Reg(UInt(16.W))
-  val TmpAddr   = Reg(UInt(16.W))
-  val IR        = Reg(UInt(8.W))
-  val ISet      = Reg(UInt(2.W))
-  val XY_State  = Reg(UInt(2.W))
-  val IStatus   = Reg(UInt(2.W))
-  val mcycles_r = Reg(UInt(3.W))
-  val dout_r    = Reg(UInt(8.W))
-  val ACC       = Reg(UInt(8.W))
-  val F         = Reg(Vec(8, Bool()))
-  val Ap        = Reg(UInt(8.W))
-  val Fp        = Reg(UInt(8.W))
-  val I         = Reg(UInt(8.W))
-  val SP        = Reg(UInt(16.W))
-  val Alternate = Reg(Bool())
-  val Read_To_Reg_r = Reg(UInt(5.W))
-  val Arith16_r = Reg(Bool())
-  val BTR_r     = Reg(Bool())
-  val Z16_r     = Reg(Bool())
-  val ALU_Op_r  = Reg(UInt(4.W))
-  val Save_ALU_r = Reg(Bool())
-  val PreserveC_r = Reg(Bool())
-  val XY_Ind    = Reg(Bool())
+  // All registers
+  val PC        = RegInit(0.U(16.W))
+  val A_reg     = RegInit(0.U(16.W))
+  val TmpAddr   = RegInit(0.U(16.W))
+  val IR        = RegInit(0.U(8.W))
+  val ISet      = RegInit(0.U(2.W))
+  val XY_State  = RegInit(0.U(2.W))
+  val IStatus   = RegInit(0.U(2.W))
+  val mcycles_r = RegInit(0.U(3.W))
+  val dout_r    = RegInit(0.U(8.W))
+  val ACC       = RegInit(0xFF.U(8.W))
+  val F         = RegInit(VecInit(Seq.fill(8)(true.B)))
+  val Ap        = RegInit(0xFF.U(8.W))
+  val Fp        = RegInit(0xFF.U(8.W))
+  val I         = RegInit(0.U(8.W))
+  val SP        = RegInit(0xFFFF.U(16.W))
+  val Alternate = RegInit(false.B)
+  val Read_To_Reg_r = RegInit(0.U(5.W))
+  val Arith16_r = RegInit(false.B)
+  val BTR_r     = RegInit(false.B)
+  val Z16_r     = RegInit(false.B)
+  val ALU_Op_r  = RegInit(0.U(4.W))
+  val Save_ALU_r = RegInit(false.B)
+  val PreserveC_r = RegInit(false.B)
+  val XY_Ind    = RegInit(false.B)
 
   // State machine registers
-  val mcycle      = Reg(UInt(7.W))
-  val tstate      = Reg(UInt(7.W))
-  val Pre_XY_F_M  = Reg(UInt(3.W))
-  val Halt_FF     = Reg(Bool())
-  val BusAck      = Reg(Bool())
-  val NMICycle    = Reg(Bool())
-  val IntCycle    = Reg(Bool())
-  val IntE_FF1    = Reg(Bool())
-  val IntE_FF2    = Reg(Bool())
-  val No_BTR      = Reg(Bool())
-  val Auto_Wait_t1 = Reg(Bool())
-  val Auto_Wait_t2 = Reg(Bool())
-  val m1_n_r      = Reg(Bool())
-  val BusReq_s    = Reg(Bool())
-  val INT_s       = Reg(Bool())
-  val NMI_s       = Reg(Bool())
-  val Oldnmi_n    = Reg(Bool())
+  val mcycle      = RegInit("b0000001".U(7.W))
+  val tstate      = RegInit("b0000001".U(7.W))
+  val Pre_XY_F_M  = RegInit(0.U(3.W))
+  val Halt_FF     = RegInit(false.B)
+  val BusAck      = RegInit(false.B)
+  val NMICycle    = RegInit(false.B)
+  val IntCycle    = RegInit(false.B)
+  val IntE_FF1    = RegInit(false.B)
+  val IntE_FF2    = RegInit(false.B)
+  val No_BTR      = RegInit(false.B)
+  val Auto_Wait_t1 = RegInit(false.B)
+  val Auto_Wait_t2 = RegInit(false.B)
+  val m1_n_r      = RegInit(true.B)
+  val BusReq_s    = RegInit(false.B)
+  val INT_s       = RegInit(false.B)
+  val NMI_s       = RegInit(false.B)
+  val Oldnmi_n    = RegInit(false.B)
 
   // Buses (registered)
   val BusB = Reg(UInt(8.W))
   val BusA = Reg(UInt(8.W))
 
   // Register file interface regs
-  val RegAddrA_r = Reg(UInt(3.W))
-  val RegAddrB_r = Reg(UInt(3.W))
-  val RegAddrC   = Reg(UInt(3.W))
-  val RegBusA_r  = Reg(UInt(16.W))
-  val IncDecZ    = Reg(Bool())
+  val RegAddrA_r = RegInit(0.U(3.W))
+  val RegAddrB_r = RegInit(0.U(3.W))
+  val RegAddrC   = RegInit(0.U(3.W))
+  val RegBusA_r  = RegInit(0.U(16.W))
+  val IncDecZ    = RegInit(false.B)
 
   // Microcode outputs (wires)
   val mcycles_d   = Wire(UInt(3.W))
@@ -399,34 +398,8 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   ID16_B := Mux(IncDec_16(3), 0xFFFF.U(16.W), 1.U(16.W))
   ID16 := RegBusA + ID16_B
 
-  // Reset and clock enable logic
-  when(!io.reset_n) {
-    PC        := 0.U
-    A_reg     := 0.U
-    TmpAddr   := 0.U
-    IR        := 0.U
-    ISet      := 0.U
-    XY_State  := 0.U
-    IStatus   := 0.U
-    mcycles_r := 0.U
-    dout_r    := 0.U
-    ACC       := 0xFF.U
-    F         := VecInit(0xFF.U.asBools)
-    Ap        := 0xFF.U
-    Fp        := 0xFF.U
-    I         := 0.U
-    SP        := 0xFFFF.U
-    Alternate := false.B
-    Read_To_Reg_r := 0.U
-    Arith16_r := false.B
-    BTR_r     := false.B
-    Z16_r     := false.B
-    ALU_Op_r  := 0.U
-    Save_ALU_r := false.B
-    PreserveC_r := false.B
-    XY_Ind    := false.B
-  }.otherwise {
-    when(ClkEn_w) {
+  // Core datapath update
+  when(ClkEn_w) {
       ALU_Op_r     := 0.U
       Save_ALU_r   := false.B
       Read_To_Reg_r := 0.U
@@ -680,18 +653,10 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
         }
       }
 
-    } // ClkEn
-  } // reset_n
+  } // ClkEn
 
   // Register file addr/data registered updates
-  when(!io.reset_n) {
-    RegAddrA_r := 0.U
-    RegAddrB_r := 0.U
-    RegAddrC   := 0.U
-    IncDecZ    := false.B
-    RegBusA_r  := 0.U
-  }.otherwise {
-    when(ClkEn_w) {
+  when(ClkEn_w) {
       // Bus A addr
       RegAddrA_r := Cat(Alternate, Set_BusA_To(2, 1))
       when(!XY_Ind && XY_State =/= 0.U && Set_BusA_To(2, 1) === 2.U) {
@@ -719,8 +684,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
         IncDecZ := (ID16 =/= 0.U)
       }
 
-      RegBusA_r := RegBusA
-    }
+    RegBusA_r := RegBusA
   }
 
   // Bus registers (posedge clk, no reset in Verilog)
@@ -760,38 +724,16 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   }
 
   // Sync inputs
-  when(!io.reset_n) {
-    BusReq_s  := false.B
-    INT_s     := false.B
-    NMI_s     := false.B
-    Oldnmi_n  := false.B
-  }.otherwise {
-    when(io.cen) {
-      BusReq_s := !io.busrq_n
-      INT_s    := !io.int_n
-      when(NMICycle) { NMI_s := false.B }
-      .elsewhen(!io.nmi_n && Oldnmi_n) { NMI_s := true.B }
-      Oldnmi_n := io.nmi_n
-    }
+  when(io.cen) {
+    BusReq_s := !io.busrq_n
+    INT_s    := !io.int_n
+    when(NMICycle) { NMI_s := false.B }
+    .elsewhen(!io.nmi_n && Oldnmi_n) { NMI_s := true.B }
+    Oldnmi_n := io.nmi_n
   }
 
   // Main state machine
-  when(!io.reset_n) {
-    mcycle      := "b0000001".U
-    tstate      := "b0000001".U
-    Pre_XY_F_M  := 0.U
-    Halt_FF     := false.B
-    BusAck      := false.B
-    NMICycle    := false.B
-    IntCycle    := false.B
-    IntE_FF1    := false.B
-    IntE_FF2    := false.B
-    No_BTR      := false.B
-    Auto_Wait_t1 := false.B
-    Auto_Wait_t2 := false.B
-    m1_n_r      := true.B
-  }.otherwise {
-    when(io.cen) {
+  when(io.cen) {
       when(T_Res_w) { Auto_Wait_t1 := false.B }
       .otherwise    { Auto_Wait_t1 := Auto_Wait_w || (iorq_i && !Auto_Wait_t2) }
       Auto_Wait_t2 := Auto_Wait_t1 && !T_Res_w
@@ -860,9 +802,8 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
           }
         }
       }
-      // M1 is only asserted during the opcode-fetch machine cycle.
-      when(tstate(0) && mcycle(0)) { m1_n_r := false.B }
-    }
+    // M1 is only asserted during the opcode-fetch machine cycle.
+    when(tstate(0) && mcycle(0)) { m1_n_r := false.B }
   }
 
   // Output assignments
