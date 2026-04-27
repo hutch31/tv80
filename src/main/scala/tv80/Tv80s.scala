@@ -69,9 +69,9 @@ class Tv80s(Mode: Int = 0, T2Write: Int = 1, IOWait: Int = 1) extends Module {
 
     when(mcycle(0)) {
       when(tstate(1) || (tstate(2) && !io.wait_n)) {
-        rd_n   := intcycle_n
-        mreq_n := intcycle_n
-        iorq_n := !intcycle_n
+        rd_n   := !intcycle_n
+        mreq_n := !intcycle_n
+        iorq_n := intcycle_n
       }
     }.otherwise {
       when((tstate(1) || (tstate(2) && !io.wait_n)) && !no_read && !write) {

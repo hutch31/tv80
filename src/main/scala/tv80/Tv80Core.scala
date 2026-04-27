@@ -860,7 +860,8 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
           }
         }
       }
-      when(tstate(0)) { m1_n_r := false.B }
+      // M1 is only asserted during the opcode-fetch machine cycle.
+      when(tstate(0) && mcycle(0)) { m1_n_r := false.B }
     }
   }
 

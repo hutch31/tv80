@@ -32,7 +32,6 @@ module tv80s #(
         .clock      (clk),
         .reset      (!reset_n),
         .io_reset_n (reset_n),
-        .io_clk     (clk),
         .io_wait_n  (wait_n),
         .io_int_n   (int_n),
         .io_nmi_n   (nmi_n),

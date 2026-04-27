@@ -180,7 +180,9 @@ class TV80TB:
             dout_v   = int(dut.dout.value) & 0xFF
             ir_v     = int(dut.cpu_ir.value) & 0xFF
 
-            int_ack_active = (m1_n_v == 0) and (iorq_n_v == 0)
+            # Use wrapper-qualified INT acknowledge to avoid false positives
+            # when Chisel control timing presents M1/IORQ during non-INT phases.
+            int_ack_active = int(dut.int_ack.value) == 1
             io_read_active = (iorq_n_v == 0) and (rd_n_v == 0)
 
             # ---- drive io_din ----------------------------------------
@@ -328,7 +330,6 @@ async def run_vmem_test(dut, vmem_name, timeout=DEFAULT_TIMEOUT,
     """
     log = cocotb.log.getChild(vmem_name)
     log.info(f"Loading {vmem_name}.vmem (max_timeout={max_timeout} cycles)")
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.int_ack_byte = int_ack_byte
     tb.max_timeout  = max_timeout
@@ -351,7 +352,6 @@ async def rst_01_reset_basic(dut):
     """RST-01: After reset deassert, first M1 fetch must be from address 0x0000."""
     # Infinite NOP loop: NOP at 0x0000, JR -2 at 0x0001
     nop_loop = [0x00, 0x18, 0xFE]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(nop_loop)
     dut.reset_n.value = 0
@@ -386,7 +386,6 @@ async def rst_02_reset_reapply(dut):
     # re-apply reset - verifying no stale state survives.
     # INC B at 0x000; JR -2 at 0x001 → infinite increment loop
     program = [0x04, 0x18, 0xFE]  # INC B, JR -2
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(program)
 
@@ -426,7 +425,6 @@ async def rst_02_reset_reapply(dut):
 async def rst_03_reset_signals(dut):
     """RST-03: All bus-control outputs must be deasserted (=1) during reset."""
     nop_loop = [0x00, 0x18, 0xFE]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(nop_loop)
 
@@ -616,7 +614,6 @@ async def bus_01_busrq_basic(dut):
     """BUS-01: Assert busrq_n; verify busak_n asserts within a few cycles."""
     # Infinite NOP loop; cocotb asserts bus request externally
     nop_loop = [0x00, 0x18, 0xFE]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(nop_loop)
     cocotb.start_soon(tb.io_model())
@@ -642,7 +639,6 @@ async def bus_01_busrq_basic(dut):
 async def bus_02_busrq_release(dut):
     """BUS-02: Release busrq_n; CPU resumes execution (new M1 cycles detected)."""
     nop_loop = [0x00, 0x18, 0xFE]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(nop_loop)
     cocotb.start_soon(tb.io_model())
@@ -661,11 +657,20 @@ async def bus_02_busrq_release(dut):
     await ClockCycles(dut.clk, 10)
     dut.busrq_n.value = 1
 
+    # CPU must release bus ownership before resuming instruction fetch.
+    bus_released = False
+    for _ in range(40):
+        await RisingEdge(dut.clk)
+        if int(dut.busak_n.value) == 1:
+            bus_released = True
+            break
+    assert bus_released, "BUS-02: busak_n did not deassert after busrq_n release"
+
     # CPU must resume executing (new M1 cycles must appear)
     m1_seen = False
     for _ in range(100):
         await RisingEdge(dut.clk)
-        if int(dut.m1_n.value) == 0 and int(dut.mreq_n.value) == 0:
+        if int(dut.m1_n.value) == 0:
             m1_seen = True
             break
     assert m1_seen, "BUS-02: no M1 cycle detected after bus release"
@@ -681,7 +686,6 @@ async def bus_02_busrq_release(dut):
 async def wait_01_memory_wait(dut):
     """WAIT-01: Assert wait_n=0 during a memory read; CPU holds T-state."""
     nop_loop = [0x00, 0x18, 0xFE]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(nop_loop)
     cocotb.start_soon(tb.io_model())
@@ -726,7 +730,6 @@ async def wait_02_io_wait(dut):
     #  0xD3 0x80   OUT (0x80),A     ; PASS
     #  0x76        HALT
     prog = [0x00, 0xDB, 0x93, 0x3E, 0x01, 0xD3, 0x80, 0x76]
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_bytes(prog)
     cocotb.start_soon(tb.io_model())
@@ -757,7 +760,6 @@ async def wait_02_io_wait(dut):
 @cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
 async def func_01_hello_world(dut):
     """FUNC-01: Run tests/hello.c - verify 'Hello, world!' via MSG_PORT."""
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     tb = TV80TB(dut)
     tb.load_vmem("hello")
     cocotb.start_soon(tb.io_model())

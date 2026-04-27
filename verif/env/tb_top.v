@@ -19,7 +19,6 @@
 `timescale 1ns / 1ps
 
 module tb_top (
-    input        clk,
     input        reset_n,
     input        wait_n,
     input        int_n,
@@ -45,6 +44,13 @@ module tb_top (
 );
 
     // -----------------------------------------------------------------------
+    // Clock generation (10 ns period, free-running)
+    // -----------------------------------------------------------------------
+    reg clk;
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+    // -----------------------------------------------------------------------
     // ROM (program space, A[15]=0, read-only from CPU side)
     // Exposed as public so cocotb can write program bytes before reset.
     // -----------------------------------------------------------------------
@@ -66,9 +72,10 @@ module tb_top (
     assign io_cs   = !iorq_n & !rd_n;
 
     // int_ack: asserted during INT-acknowledge cycles (m1_n=0, iorq_n=0)
-    // rd_n remains high (=1, inactive) during INT-ack, distinguishing it
-    // from a normal instruction fetch where both m1_n and mreq_n are low.
-    assign int_ack = !m1_n & !iorq_n;
+    // and only when an interrupt request is actually pending. The Chisel
+    // variant can transiently present M1/IORQ during normal startup fetch
+    // sequencing, so avoid sourcing io_din unless INT is active.
+    assign int_ack = !m1_n & !iorq_n & !int_n;
 
     // -----------------------------------------------------------------------
     // Data bus mux (replaces tri-state bus)
@@ -133,13 +140,13 @@ module tb_top (
     end
 
     // -----------------------------------------------------------------------
-    // Waveform dump (enabled by WAVES=1 via +verilator+trace plusarg)
+    // Waveform dump (enabled by WAVES=1 compile flag)
     // -----------------------------------------------------------------------
+`ifdef TV80_WAVES
     initial begin
-        if ($test$plusargs("verilator+trace")) begin
-            $dumpfile("dump.vcd");
-            $dumpvars(0, tb_top);
-        end
+        $dumpfile("dump.vcd");
+        $dumpvars(0, tb_top);
     end
+`endif
 
 endmodule

@@ -63,6 +63,7 @@ export TESTS_DIR
 # -Wno-CASEINCOMPLETE Suppress case-incomplete warnings common in RTL
 EXTRA_ARGS += --public-flat-rw
 EXTRA_ARGS += --coverage
+EXTRA_ARGS += --timing
 EXTRA_ARGS += -Wno-WIDTHTRUNC
 EXTRA_ARGS += -Wno-CASEINCOMPLETE
 EXTRA_ARGS += -Wno-UNOPTFLAT
@@ -70,6 +71,7 @@ EXTRA_ARGS += -Wno-UNOPTFLAT
 # Enable VCD waveform dump when WAVES=1
 ifeq ($(WAVES),1)
 EXTRA_ARGS += --trace
+EXTRA_ARGS += -DTV80_WAVES
 endif
 
 # -----------------------------------------------------------------------
