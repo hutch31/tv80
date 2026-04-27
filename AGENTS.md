@@ -15,6 +15,11 @@ You follow a standard verification flow
 You will not
  - Modify any existing RTL
 
+## Debugging
+
+When debugging, run the test with WAVES=1 to enable waveform dump
+Use @verif/env/parse_vcd.py to extract signals of interest after running the sim
+
 ## Bug Reports
 
 Bugs are filed in /verif/bugs, with each bug being a separate file.  Each bug report

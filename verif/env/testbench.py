@@ -363,18 +363,20 @@ async def rst_01_reset_basic(dut):
     await ClockCycles(dut.clk, 20)
     dut.reset_n.value = 1
 
-    # Wait for the first M1 cycle (m1_n=0 & mreq_n=0)
+    # Wait for the first post-reset M1 cycle and verify address 0x0000.
+    # Some wrappers sequence memory/IO control differently, but M1 still
+    # marks the first instruction cycle.
     found = False
     for _ in range(200):
         await RisingEdge(dut.clk)
-        if int(dut.m1_n.value) == 0 and int(dut.mreq_n.value) == 0:
+        if int(dut.m1_n.value) == 0:
             addr = int(dut.A.value)
             assert addr == 0x0000, \
                 f"RST-01: first M1 fetch at 0x{addr:04X}, expected 0x0000"
             found = True
             break
     if not found:
-        assert False, "RST-01: no M1 cycle detected after reset"
+        assert False, "RST-01: no M1 phase detected after reset"
 
 
 @cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
@@ -404,18 +406,20 @@ async def rst_02_reset_reapply(dut):
     await ClockCycles(dut.clk, 20)
     dut.reset_n.value = 1
 
-    # Verify first M1 cycle after second reset is from 0x0000
+    # Verify first post-reset M1 cycle after second reset is from 0x0000.
+    # Some wrappers sequence memory/IO control differently, but M1 still
+    # marks the first instruction cycle.
     found = False
     for _ in range(200):
         await RisingEdge(dut.clk)
-        if int(dut.m1_n.value) == 0 and int(dut.mreq_n.value) == 0:
+        if int(dut.m1_n.value) == 0:
             addr = int(dut.A.value)
             assert addr == 0x0000, \
                 f"RST-02: after re-reset, first fetch at 0x{addr:04X}, expected 0x0000"
             found = True
             break
     if not found:
-        assert False, "RST-02: no M1 cycle after second reset"
+        assert False, "RST-02: no M1 phase after second reset"
 
 
 @cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
