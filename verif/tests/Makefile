@@ -19,6 +19,8 @@
 SCRIPTS_DIR := ../../scripts
 TESTS_SRC   := ../../tests
 
+# TESTS_SRC is kept for header includes only (e.g. tv80_env.h).
+# All .c and .asm test sources live in this directory.
 CC       := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
 AS       := sdasz80
 LD       := sdldz80
@@ -53,7 +55,8 @@ VERIF_TESTS := \
 	load_sp_hl      \
 	load_ix_iy_nn   \
 	block_search    \
-	ex_af_shadow
+	ex_af_shadow    \
+	daa_ops
 
 VERIF_VMEM := $(addsuffix .vmem, $(VERIF_TESTS))
 
@@ -95,29 +98,11 @@ all: $(VERIF_VMEM)
 
 all_func: all $(FUNC_VMEM)
 
-# Functional test sources live in ../../tests/ – symlink or copy to local
-# then use the pattern rules above.
-alu_optest.ast: $(TESTS_SRC)/alu_optest.ast
-	cp $< $@
-
-load_optest.ast: $(TESTS_SRC)/load_optest.ast
-	cp $< $@
-
-otir.ast: $(TESTS_SRC)/otir.ast
-	cp $< $@
-
-basic_int.asm: $(TESTS_SRC)/basic_int.asm
-	cp $< $@
-
-hello.c: $(TESTS_SRC)/hello.c
-	cp $< $@
-
 # Explicit targets so C-compiled files aren't displaced by SDCC's
 # intermediate .asm output on subsequent builds.
 hello.ihx: hello.c
 	$(CC) $<
 
-# fib.c lives in verif/tests/ as the authoritative version (not copied from tests/).
 fib.ihx: fib.c
 	$(CC) $<
 
@@ -125,19 +110,15 @@ fib.ihx: fib.c
 	$(CC) $<
 
 # bintr requires its dedicated C runtime crt0
-bintr_crt0.asm: $(TESTS_SRC)/bintr_crt0.asm
-	cp $< $@
-
 bintr_crt0.rel: bintr_crt0.asm
 	$(AS) -l -o bintr_crt0.rel $<
 
-bintr.ihx: $(TESTS_SRC)/bintr.c bintr_crt0.rel
+bintr.ihx: bintr.c bintr_crt0.rel
 	$(CC) --no-std-crt0 $^ -- -m -j -x
 
 clean:
 	rm -f *.rel *.ihx *.vmem *.lnk *.map *.sym *.rst *.noi *.lk
-	rm -f alu_optest.ast load_optest.ast otir.ast basic_int.asm
-	rm -f hello.c bintr.c bintr_crt0.asm fib.asm
+	rm -f fib.asm
 
 # distclean also removes listing files (kept by clean for debugging)
 distclean: clean

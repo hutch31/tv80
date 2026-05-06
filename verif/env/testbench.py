@@ -481,6 +481,12 @@ async def alu_12_daa_carry(dut):
     await run_vmem_test(dut, "daa_carry")
 
 
+@cocotb.test(timeout_time=_STD_TIMEOUT_NS, timeout_unit="ns")
+async def alu_13_daa_ops(dut):
+    """ALU-13: DAA comprehensive - S/Z/P flags, N preservation, ADC/SBC, multi-step chain, edge cases."""
+    await run_vmem_test(dut, "daa_ops")
+
+
 # ===========================================================================
 # ╔═══════════════════════════════════════════════════════════╗
 # ║              4.5  ALU - Bit Operations                    ║

@@ -81,15 +81,14 @@ endif
 
 coverage: sim
 	@echo "=== Generating coverage report ==="
-	@if [ -f coverage.dat ]; then \
-		COV_DATA=coverage.dat; \
-	elif [ -f sim_build/coverage.dat ]; then \
-		COV_DATA=sim_build/coverage.dat; \
-	else \
+	@COV_DATA=$$(ls -t sim_build/coverage.dat coverage.dat 2>/dev/null | head -n 1); \
+	if [ -z "$$COV_DATA" ]; then \
 		echo "%Error: Can't read coverage.dat or sim_build/coverage.dat"; \
 		exit 1; \
 	fi; \
+	echo "Using coverage data: $$COV_DATA (RTL_VARIANT=$(RTL_VARIANT))"; \
 	verilator_coverage --annotate coverage_annotated \
+	    --annotate-all \
 	    --annotate-min 1 \
 	    $$COV_DATA
 	@echo "Coverage report written to coverage_annotated/"
