@@ -60,8 +60,5 @@ RUN apt-get update && apt-get install -y sdcc iverilog
 # Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
-
 # Default command
 CMD ["bash"]# Use an official Debian runtime as a parent image

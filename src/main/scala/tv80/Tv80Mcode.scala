@@ -67,6 +67,25 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
   val aSP   = 5.U(3.W)
   val aZI   = 6.U(3.W)
 
+  // Bus source select constants (for Set_BusA_To / Set_BusB_To)
+  // Values 0-5: register file (bits[2:1] = pair addr, bit[0] = 1 for low byte)
+  val bsB    = 0.U(4.W)   // Register B
+  val bsC    = 1.U(4.W)   // Register C
+  val bsD    = 2.U(4.W)   // Register D
+  val bsE    = 3.U(4.W)   // Register E
+  val bsH    = 4.U(4.W)   // Register H
+  val bsL    = 5.U(4.W)   // Register L
+  val bsDI   = 6.U(4.W)   // Data input register (DI_Reg)
+  val bsA    = 7.U(4.W)   // Accumulator (ACC)
+  val bsSPL  = 8.U(4.W)   // SP low byte
+  val bsSPH  = 9.U(4.W)   // SP high byte
+  // Values 10-15: BusB-specific sources; BusA outputs 0 for these values
+  val bsOne  = 10.U(4.W)  // Constant 1 (BusB) / 0 (BusA)
+  val bsF    = 11.U(4.W)  // Flags register F (BusB) / 0 (BusA)
+  val bsPCL  = 12.U(4.W)  // PC low byte (BusB) / 0 (BusA)
+  val bsPCH  = 13.U(4.W)  // PC high byte (BusB) / 0 (BusA)
+  val bsZero = 14.U(4.W)  // Constant 0
+
   // Flag bit positions (Scala constants, mode-dependent)
   val Flag_C = if (Mode == 3) 4 else 0
   val Flag_N = 1
@@ -112,8 +131,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
   val incDec16   = WireDefault(0.U(4.W))
   val readToReg  = WireDefault(false.B)
   val readToAcc  = WireDefault(false.B)
-  val setBusATo  = WireDefault(0.U(4.W))
-  val setBusBTo  = WireDefault(0.U(4.W))
+  val setBusATo  = WireDefault(bsB)
+  val setBusBTo  = WireDefault(bsB)
   val aluOp      = WireDefault(Cat(0.U(1.W), io.IR(5,3)))
   val saveALU    = WireDefault(false.B)
   val preserveC  = WireDefault(false.B)
@@ -252,7 +271,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       mcycles := 2.U
       when(io.MCycle(0)) {
         setAddrTo := aBC
-        setBusBTo := 7.U  // 4'b0111
+        setBusBTo := bsA
       }
       when(io.MCycle(1)) { write := true.B }
 
@@ -261,7 +280,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       mcycles := 2.U
       when(io.MCycle(0)) {
         setAddrTo := aDE
-        setBusBTo := 7.U  // 4'b0111
+        setBusBTo := bsA
       }
       when(io.MCycle(1)) { write := true.B }
 
@@ -272,7 +291,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         mcycles := 2.U
         when(io.MCycle(0)) {
           setAddrTo := aXY
-          setBusBTo := 7.U
+          setBusBTo := bsA
         }
         when(io.MCycle(1)) {
           write    := true.B
@@ -288,7 +307,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         when(io.MCycle(2)) {
           setAddrTo := aZI
           incPC     := true.B
-          setBusBTo := 7.U  // 4'b0111
+          setBusBTo := bsA
         }
         when(io.MCycle(3)) { write := true.B }
       }
@@ -299,12 +318,12 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       when(io.MCycle(1)) {
         incPC     := true.B
         readToReg := true.B
-        setBusATo := Mux(DPAIR === 3.U, 8.U, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
+        setBusATo := Mux(DPAIR === 3.U, bsSPL, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
       }
       when(io.MCycle(2)) {
         incPC     := true.B
         readToReg := true.B
-        setBusATo := Mux(DPAIR === 3.U, 9.U, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
+        setBusATo := Mux(DPAIR === 3.U, bsSPH, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
       }
 
     // 8'b00101010: LD HL,(nn) or LDI A,(HL) [Mode==3]
@@ -330,13 +349,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           ldw       := true.B
         }
         when(io.MCycle(3)) {
-          setBusATo := 5.U  // L
+          setBusATo := bsL
           readToReg := true.B
           incWZ     := true.B
           setAddrTo := aZI
         }
         when(io.MCycle(4)) {
-          setBusATo := 4.U  // H
+          setBusATo := bsH
           readToReg := true.B
         }
       }
@@ -348,7 +367,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         mcycles := 2.U
         when(io.MCycle(0)) {
           setAddrTo := aXY
-          setBusBTo := 7.U
+          setBusBTo := bsA
         }
         when(io.MCycle(1)) {
           write    := true.B
@@ -365,13 +384,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           setAddrTo := aZI
           incPC     := true.B
           ldw       := true.B
-          setBusBTo := 5.U  // L
+          setBusBTo := bsL
         }
         when(io.MCycle(3)) {
           incWZ     := true.B
           setAddrTo := aZI
           write     := true.B
-          setBusBTo := 4.U  // H
+          setBusBTo := bsH
         }
         when(io.MCycle(4)) { write := true.B }
       }
@@ -388,12 +407,12 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         tStates   := 5.U
         incDec16  := 0xF.U  // 4'b1111 (dec SP)
         setAddrTo := aSP
-        setBusBTo := Mux(DPAIR === 3.U, 7.U, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
+        setBusBTo := Mux(DPAIR === 3.U, bsA, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
       }
       when(io.MCycle(1)) {
         incDec16  := 0xF.U
         setAddrTo := aSP
-        setBusBTo := Mux(DPAIR === 3.U, 0xB.U, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
+        setBusBTo := Mux(DPAIR === 3.U, bsF, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
         write     := true.B
       }
       when(io.MCycle(2)) { write := true.B }
@@ -406,12 +425,12 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         incDec16  := 7.U  // 4'b0111 (inc SP)
         setAddrTo := aSP
         readToReg := true.B
-        setBusATo := Mux(DPAIR === 3.U, 0xB.U, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
+        setBusATo := Mux(DPAIR === 3.U, bsF, Cat(0.U(1.W), DPAIR, 1.U(1.W)))
       }
       when(io.MCycle(2)) {
         incDec16  := 7.U
         readToReg := true.B
-        setBusATo := Mux(DPAIR === 3.U, 7.U, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
+        setBusATo := Mux(DPAIR === 3.U, bsA, Cat(0.U(1.W), DPAIR, 0.U(1.W)))
       }
 
     // 8'b11101011: EX DE,HL
@@ -431,13 +450,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           setAddrTo := aZI
           incPC     := true.B
           ldw       := true.B
-          setBusBTo := 8.U  // SP low
+          setBusBTo := bsSPL
         }
         when(io.MCycle(3)) {
           incWZ     := true.B
           setAddrTo := aZI
           write     := true.B
-          setBusBTo := 9.U  // SP high
+          setBusBTo := bsSPH
         }
         when(io.MCycle(4)) { write := true.B }
       } else if (Mode < 2) {
@@ -472,8 +491,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         when(io.MCycle(0)) { setAddrTo := aSP }
         when(io.MCycle(1)) {
           readToReg := true.B
-          setBusATo := 5.U
-          setBusBTo := 5.U
+          setBusATo := bsL
+          setBusBTo := bsL
           setAddrTo := aSP
         }
         when(io.MCycle(2)) {
@@ -484,8 +503,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         }
         when(io.MCycle(3)) {
           readToReg := true.B
-          setBusATo := 4.U
-          setBusBTo := 4.U
+          setBusATo := bsH
+          setBusBTo := bsH
           setAddrTo := aSP
         }
         when(io.MCycle(4)) {
@@ -505,12 +524,12 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           readToReg := true.B
           saveALU   := true.B
           setBusBTo := Cat(0.U(1.W), SSS)
-          setBusATo := 7.U  // A
+          setBusATo := bsA
         }
       }.otherwise {
         // ALU A,r
         setBusBTo := Cat(0.U(1.W), SSS)
-        setBusATo := 7.U  // A
+        setBusATo := bsA
         readToReg := true.B
         saveALU   := true.B
       }
@@ -523,7 +542,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         readToReg := true.B
         saveALU   := true.B
         setBusBTo := Cat(0.U(1.W), SSS)
-        setBusATo := 7.U  // A
+        setBusATo := bsA
       }
 
     // 8'b00zzz100: INC r or INC (HL)
@@ -539,13 +558,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           saveALU   := true.B
           preserveC := true.B
           aluOp     := 0.U
-          setBusBTo := 0xA.U  // 4'b1010
+          setBusBTo := bsOne  // 4'b1010
           setBusATo := Cat(0.U(1.W), DDD)
         }
         when(io.MCycle(2)) { write := true.B }
       }.otherwise {
         // INC r
-        setBusBTo := 0xA.U
+        setBusBTo := bsOne
         setBusATo := Cat(0.U(1.W), DDD)
         readToReg := true.B
         saveALU   := true.B
@@ -566,13 +585,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           readToReg := true.B
           saveALU   := true.B
           preserveC := true.B
-          setBusBTo := 0xA.U
+          setBusBTo := bsOne
           setBusATo := Cat(0.U(1.W), DDD)
         }
         when(io.MCycle(2)) { write := true.B }
       }.otherwise {
         // DEC r
-        setBusBTo := 0xA.U
+        setBusBTo := bsOne
         setBusATo := Cat(0.U(1.W), DDD)
         readToReg := true.B
         saveALU   := true.B
@@ -582,7 +601,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
 
     // 8'b00100111: DAA
     }.elsewhen(io.IR === 0x27.U) {
-      setBusATo := 7.U
+      setBusATo := bsA
       readToReg := true.B
       aluOp     := 0xC.U
       saveALU   := true.B
@@ -607,14 +626,14 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           tStates   := 5.U
           incDec16  := 0xF.U
           setAddrTo := aSP
-          setBusBTo := 0xD.U
+          setBusBTo := bsPCH
         }
         when(io.MCycle(1)) {
           tStates   := 4.U
           write     := true.B
           incDec16  := 0xF.U
           setAddrTo := aSP
-          setBusBTo := 0xC.U
+          setBusBTo := bsPCL
         }
         when(io.MCycle(2)) {
           tStates := 4.U
@@ -627,14 +646,14 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           tStates   := 5.U
           incDec16  := 0xF.U
           setAddrTo := aSP
-          setBusBTo := 0xD.U
+          setBusBTo := bsPCH
         }
         when(io.MCycle(1)) {
           tStates   := 4.U
           write     := true.B
           incDec16  := 0xF.U
           setAddrTo := aSP
-          setBusBTo := 0xC.U
+          setBusBTo := bsPCL
         }
         when(io.MCycle(2)) {
           tStates := 4.U
@@ -663,11 +682,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         aluOp     := 0.U
         readToReg := true.B
         saveALU   := true.B
-        setBusATo := 5.U  // L
+        setBusATo := bsL
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 1.U(1.W))
         }.otherwise {
-          setBusBTo := 8.U
+          setBusBTo := bsSPL
         }
         tStates := 4.U
         arith16 := true.B
@@ -677,11 +696,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         readToReg := true.B
         saveALU   := true.B
         aluOp     := 1.U
-        setBusATo := 4.U  // H
+        setBusATo := bsH
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 0.U(1.W))
         }.otherwise {
-          setBusBTo := 9.U
+          setBusBTo := bsSPH
         }
         arith16 := true.B
       }
@@ -698,7 +717,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
 
     // 8'b00000111,00010111,00001111,00011111: RLCA,RLA,RRCA,RRA
     }.elsewhen(io.IR === 0x07.U || io.IR === 0x17.U || io.IR === 0x0F.U || io.IR === 0x1F.U) {
-      setBusATo := 7.U
+      setBusATo := bsA
       aluOp     := 8.U
       readToReg := true.B
       saveALU   := true.B
@@ -726,7 +745,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
               mcycles := 2.U
               when(io.MCycle(0)) {
                 setAddrTo := aBC
-                setBusBTo := 7.U
+                setBusBTo := bsA
               }
               when(io.MCycle(1)) {
                 write := true.B
@@ -743,7 +762,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
               when(io.MCycle(2)) {
                 setAddrTo := aZI
                 incPC     := true.B
-                setBusBTo := 7.U
+                setBusBTo := bsA
               }
               when(io.MCycle(3)) { write := true.B }
             }
@@ -840,8 +859,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         when(io.MCycle(0)) {
           tStates   := 5.U
           iDJNZ     := true.B
-          setBusBTo := 0xA.U
-          setBusATo := 0.U
+          setBusBTo := bsOne
+          setBusATo := bsB
           readToReg := true.B
           saveALU   := true.B
           aluOp     := 2.U
@@ -870,13 +889,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         tStates   := 4.U
         setAddrTo := aSP
         ldw       := true.B
-        setBusBTo := 0xD.U
+        setBusBTo := bsPCH
       }
       when(io.MCycle(3)) {
         write     := true.B
         incDec16  := 0xF.U
         setAddrTo := aSP
-        setBusBTo := 0xC.U
+        setBusBTo := bsPCL
       }
       when(io.MCycle(4)) {
         write := true.B
@@ -899,7 +918,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
             incDec16  := 0xF.U
             setAddrTo := aSP
             tStates   := 4.U
-            setBusBTo := 0xD.U
+            setBusBTo := bsPCH
           }.otherwise {
             mcycles := 3.U
           }
@@ -908,7 +927,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
           write     := true.B
           incDec16  := 0xF.U
           setAddrTo := aSP
-          setBusBTo := 0xC.U
+          setBusBTo := bsPCL
         }
         when(io.MCycle(4)) {
           write := true.B
@@ -929,7 +948,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
               incDec16  := 0xF.U
               setAddrTo := aSP
               tStates   := 4.U
-              setBusBTo := 0xD.U
+              setBusBTo := bsPCH
             }.otherwise {
               mcycles := 3.U
             }
@@ -938,7 +957,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
             write     := true.B
             incDec16  := 0xF.U
             setAddrTo := aSP
-            setBusBTo := 0xC.U
+            setBusBTo := bsPCL
           }
           when(io.MCycle(4)) {
             write := true.B
@@ -972,7 +991,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
               when(io.MCycle(1)) {
                 incPC     := true.B
                 setAddrTo := aIOA
-                setBusBTo := 7.U
+                setBusBTo := bsA
               }
               when(io.MCycle(2)) { write := true.B }
             }
@@ -984,16 +1003,16 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
                 incPC     := true.B
                 readToReg := true.B
                 saveALU   := true.B
-                setBusATo := 8.U
-                setBusBTo := 6.U
+                setBusATo := bsSPL
+                setBusBTo := bsDI
               }
               when(io.MCycle(2)) {
                 noRead    := true.B
                 readToReg := true.B
                 saveALU   := true.B
                 aluOp     := 1.U
-                setBusATo := 9.U
-                setBusBTo := 0xE.U
+                setBusATo := bsSPH
+                setBusBTo := bsZero
               }
             }
             is(2.U) {
@@ -1018,13 +1037,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
                 ldw       := true.B
               }
               when(io.MCycle(3)) {
-                setBusATo := 5.U  // L
+                setBusATo := bsL
                 readToReg := true.B
                 incWZ     := true.B
                 setAddrTo := aZI
               }
               when(io.MCycle(4)) {
-                setBusATo := 4.U  // H
+                setBusATo := bsH
                 readToReg := true.B
               }
             }
@@ -1079,13 +1098,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         tStates   := 5.U
         incDec16  := 0xF.U
         setAddrTo := aSP
-        setBusBTo := 0xD.U
+        setBusBTo := bsPCH
       }
       when(io.MCycle(1)) {
         write     := true.B
         incDec16  := 0xF.U
         setAddrTo := aSP
-        setBusBTo := 0xC.U
+        setBusBTo := bsPCL
       }
       when(io.MCycle(2)) {
         write := true.B
@@ -1113,7 +1132,7 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         when(io.MCycle(1)) {
           incPC     := true.B
           setAddrTo := aIOA
-          setBusBTo := 7.U
+          setBusBTo := bsA
         }
         when(io.MCycle(2)) {
           write := true.B
@@ -1253,13 +1272,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       }
       when(io.MCycle(3)) {
         readToReg := true.B
-        setBusATo := Mux(io.IR(5,4) === 3.U, 8.U, Cat(0.U(1.W), io.IR(5,4), 1.U(1.W)))
+        setBusATo := Mux(io.IR(5,4) === 3.U, bsSPL, Cat(0.U(1.W), io.IR(5,4), 1.U(1.W)))
         incWZ     := true.B
         setAddrTo := aZI
       }
       when(io.MCycle(4)) {
         readToReg := true.B
-        setBusATo := Mux(io.IR(5,4) === 3.U, 9.U, Cat(0.U(1.W), io.IR(5,4), 0.U(1.W)))
+        setBusATo := Mux(io.IR(5,4) === 3.U, bsSPH, Cat(0.U(1.W), io.IR(5,4), 0.U(1.W)))
       }
 
     // 8'b01xx0011: LD (nn),dd
@@ -1273,13 +1292,13 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         setAddrTo := aZI
         incPC     := true.B
         ldw       := true.B
-        setBusBTo := Mux(io.IR(5,4) === 3.U, 8.U, Cat(0.U(1.W), io.IR(5,4), 1.U(1.W)))
+        setBusBTo := Mux(io.IR(5,4) === 3.U, bsSPL, Cat(0.U(1.W), io.IR(5,4), 1.U(1.W)))
       }
       when(io.MCycle(3)) {
         incWZ     := true.B
         setAddrTo := aZI
         write     := true.B
-        setBusBTo := Mux(io.IR(5,4) === 3.U, 9.U, Cat(0.U(1.W), io.IR(5,4), 0.U(1.W)))
+        setBusBTo := Mux(io.IR(5,4) === 3.U, bsSPH, Cat(0.U(1.W), io.IR(5,4), 0.U(1.W)))
       }
       when(io.MCycle(4)) { write := true.B }
 
@@ -1291,8 +1310,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         incDec16  := 0xC.U  // dec BC
       }
       when(io.MCycle(1)) {
-        setBusBTo := 6.U
-        setBusATo := 7.U  // A
+        setBusBTo := bsDI
+        setBusATo := bsA  // A
         aluOp     := 0.U
         setAddrTo := aDE
         incDec16  := Mux(io.IR(3), 0xE.U, 6.U)  // dec or inc IX
@@ -1316,8 +1335,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         incDec16  := 0xC.U
       }
       when(io.MCycle(1)) {
-        setBusBTo := 6.U
-        setBusATo := 7.U
+        setBusBTo := bsDI
+        setBusATo := bsA
         aluOp     := 7.U
         saveALU   := true.B
         preserveC := true.B
@@ -1337,8 +1356,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
     }.elsewhen(io.IR === 0x44.U || io.IR === 0x4C.U || io.IR === 0x54.U || io.IR === 0x5C.U ||
                io.IR === 0x64.U || io.IR === 0x6C.U || io.IR === 0x74.U || io.IR === 0x7C.U) {
       aluOp     := 2.U
-      setBusBTo := 7.U
-      setBusATo := 0xA.U
+      setBusBTo := bsA
+      setBusATo := bsOne
       readToAcc := true.B
       saveALU   := true.B
 
@@ -1362,11 +1381,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         aluOp     := 1.U
         readToReg := true.B
         saveALU   := true.B
-        setBusATo := 5.U  // L
+        setBusATo := bsL
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 1.U(1.W))
         }.otherwise {
-          setBusBTo := 8.U
+          setBusBTo := bsSPL
         }
         tStates := 4.U
       }
@@ -1375,11 +1394,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         readToReg := true.B
         saveALU   := true.B
         aluOp     := 1.U
-        setBusATo := 4.U  // H
+        setBusATo := bsH
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 0.U(1.W))
         }.otherwise {
-          setBusBTo := 9.U
+          setBusBTo := bsSPH
         }
       }
 
@@ -1391,11 +1410,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         aluOp     := 3.U
         readToReg := true.B
         saveALU   := true.B
-        setBusATo := 5.U  // L
+        setBusATo := bsL
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 1.U(1.W))
         }.otherwise {
-          setBusBTo := 8.U
+          setBusBTo := bsSPL
         }
         tStates := 4.U
       }
@@ -1404,11 +1423,11 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
         aluOp     := 3.U
         readToReg := true.B
         saveALU   := true.B
-        setBusATo := 4.U  // H
+        setBusATo := bsH
         when(io.IR(5,4) === 0.U || io.IR(5,4) === 1.U || io.IR(5,4) === 2.U) {
           setBusBTo := Cat(0.U(1.W), io.IR(5,4), 0.U(1.W))
         }.otherwise {
-          setBusBTo := 9.U
+          setBusBTo := bsSPH
         }
       }
 
@@ -1421,8 +1440,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       }
       when(io.MCycle(2)) {
         readToReg := true.B
-        setBusBTo := 6.U
-        setBusATo := 7.U
+        setBusBTo := bsDI
+        setBusATo := bsA
         aluOp     := 0xD.U
         tStates   := 4.U
         setAddrTo := aXY
@@ -1439,8 +1458,8 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       when(io.MCycle(1)) { setAddrTo := aXY }
       when(io.MCycle(2)) {
         readToReg := true.B
-        setBusBTo := 6.U
-        setBusATo := 7.U
+        setBusBTo := bsDI
+        setBusATo := bsA
         aluOp     := 0xE.U
         tStates   := 4.U
         setAddrTo := aXY
@@ -1499,15 +1518,15 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       mcycles := 4.U
       when(io.MCycle(0)) {
         setAddrTo := aBC
-        setBusBTo := 0xA.U
-        setBusATo := 0.U
+        setBusBTo := bsOne
+        setBusATo := bsB
         readToReg := true.B
         saveALU   := true.B
         aluOp     := 2.U
       }
       when(io.MCycle(1)) {
         iorq      := true.B
-        setBusBTo := 6.U
+        setBusBTo := bsDI
         setAddrTo := aXY
       }
       when(io.MCycle(2)) {
@@ -1527,14 +1546,14 @@ class Tv80Mcode(Mode: Int = 0) extends Module {
       when(io.MCycle(0)) {
         tStates   := 5.U
         setAddrTo := aXY
-        setBusBTo := 0xA.U
-        setBusATo := 0.U
+        setBusBTo := bsOne
+        setBusATo := bsB
         readToReg := true.B
         saveALU   := true.B
         aluOp     := 2.U
       }
       when(io.MCycle(1)) {
-        setBusBTo := 6.U
+        setBusBTo := bsDI
         setAddrTo := aBC
         incDec16  := Mux(io.IR(3), 0xE.U, 6.U)
       }
