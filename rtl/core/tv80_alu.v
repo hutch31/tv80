@@ -272,7 +272,7 @@ module tv80_alu (/*AUTOARG*/
 	      end
             
 	    F_Out[Flag_S] = DAA_Q[7];
-	    F_Out[Flag_P] = ~ (^DAA_Q);
+	    F_Out[Flag_P] = ~ (^DAA_Q[7:0]);
           end // case: 4'b1100
         
 	4'b1101, 4'b1110 :
