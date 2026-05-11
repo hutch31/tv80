@@ -239,6 +239,7 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
   i_alu.io.F_In    := F.asUInt
   val ALU_Q = i_alu.io.Q
   val F_Out = i_alu.io.F_Out
+  val cpiXYN = ALU_Q - Cat(0.U(7.W), F_Out(Flag_H))
 
   // Combinational signal declarations (must precede i_reg which references them)
   val ClkEn_w           = Wire(Bool())
@@ -637,6 +638,10 @@ class Tv80Core(Mode: Int = 1, IOWait: Int = 1) extends Module {
         F(Flag_Y) := ALU_Q(1)
         F(Flag_H) := false.B
         F(Flag_N) := false.B
+      }
+      when(tstate(1) && I_BC) {
+        F(Flag_X) := cpiXYN(3)
+        F(Flag_Y) := cpiXYN(1)
       }
       when(I_BC || I_BT) {
         F(Flag_P) := IncDecZ

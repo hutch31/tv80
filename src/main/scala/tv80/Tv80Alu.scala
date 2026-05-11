@@ -60,25 +60,23 @@ class Tv80Alu(Mode: Int = 0) extends Module {
   val overflow   = WireDefault(false.B)
   val carry      = WireDefault(false.B)
   val q_v        = WireDefault(0.U(8.W))
+  val addsub1    = WireDefault(0.U(2.W))
+  val addsub3    = WireDefault(0.U(4.W))
+  val addsub4    = WireDefault(0.U(5.W))
 
   useCarry := !io.ALU_Op(2) && io.ALU_Op(0)
   val sub      = io.ALU_Op(1)
   val carryIn0 = sub ^ (useCarry && io.F_In(Flag_C))
 
-  val res4 = addSub4(io.BusA(3, 0), io.BusB(3, 0), sub, carryIn0)
-  halfCarry  := res4(4)
-  val qv3_0 = res4(3, 0)
-
-  val res3 = addSub3(io.BusA(6, 4), io.BusB(6, 4), sub, halfCarry)
-  carry7    := res3(3)
-  val qv6_4 = res3(2, 0)
-
-  val res1 = addSub1(io.BusA(7), io.BusB(7), sub, carry7)
-  carry     := res1(1)
-  val qv7   = res1(0)
+  addsub4 := addSub4(io.BusA(3, 0), io.BusB(3, 0), sub, carryIn0)
+  halfCarry := addsub4(4)
+  addsub3 := addSub3(io.BusA(6, 4), io.BusB(6, 4), sub, halfCarry)
+  carry7 := addsub3(3)
+  addsub1 := addSub1(io.BusA(7), io.BusB(7), sub, carry7)
+  carry := addsub1(1)
 
   overflow  := carry ^ carry7
-  q_v       := Cat(qv7, qv6_4, qv3_0)
+  q_v       := Cat(addsub1(0), addsub3(2, 0), addsub4(3, 0))
 
   // Main ALU logic
   val q_t = WireDefault(0.U(8.W))
@@ -205,7 +203,7 @@ class Tv80Alu(Mode: Int = 0) extends Module {
       }
 
       f_S := daaQ2(7)
-      f_P := !daaQ2.xorR
+      f_P := !daaQ2(7, 0).xorR
     }
 
     is(0xD.U, 0xE.U) { // RLD, RRD
