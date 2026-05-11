@@ -92,6 +92,9 @@ module tv80_alu (/*AUTOARG*/
 
   reg [7:0] BitMask;
 
+  reg [1:0] addsub1;
+  reg [3:0] addsub3;
+  reg [4:0] addsub4;
 
   always @(/*AUTOSENSE*/ALU_Op or BusA or BusB or F_In or IR)
     begin
@@ -107,9 +110,15 @@ module tv80_alu (/*AUTOARG*/
       endcase // case(IR[5:3])
       
       UseCarry = ~ ALU_Op[2] && ALU_Op[0];
-      { HalfCarry_v, Q_v[3:0] } = AddSub4(BusA[3:0], BusB[3:0], ALU_Op[1], ALU_Op[1] ^ (UseCarry && F_In[Flag_C]) );
-      { Carry7_v, Q_v[6:4]  } = AddSub3(BusA[6:4], BusB[6:4], ALU_Op[1], HalfCarry_v);
-      { Carry_v, Q_v[7] } = AddSub1(BusA[7], BusB[7], ALU_Op[1], Carry7_v);
+
+      addsub4 = AddSub4(BusA[3:0], BusB[3:0], ALU_Op[1], ALU_Op[1] ^ (UseCarry && F_In[Flag_C]) );
+	  HalfCarry_v = addsub4[4];
+	  addsub3 = AddSub3(BusA[6:4], BusB[6:4], ALU_Op[1], HalfCarry_v);
+	  Carry7_v = addsub3[3];
+	  addsub1 = AddSub1(BusA[7], BusB[7], ALU_Op[1], Carry7_v);
+
+	  Carry_v = addsub1[1];
+	  Q_v = { addsub1[0], addsub3[2:0], addsub4[3:0]};
       OverFlow_v = Carry_v ^ Carry7_v;
     end // always @ *
   
