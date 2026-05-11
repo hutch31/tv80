@@ -17,11 +17,11 @@
 #   make clean    – remove generated files
 
 SCRIPTS_DIR := ../../scripts
-TESTS_SRC   := ../../tests
+TESTS_SRC   := .
 
 # TESTS_SRC is kept for header includes only (e.g. tv80_env.h).
 # All .c and .asm test sources live in this directory.
-CC       := sdcc -mz80 -I$(TESTS_SRC) -I../../sc_env -I.
+CC       := sdcc -mz80 -I$(TESTS_SRC) -I.
 AS       := sdasz80
 LD       := sdldz80
 IHEX2MEM := $(SCRIPTS_DIR)/ihex2mem.py
