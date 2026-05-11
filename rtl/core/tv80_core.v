@@ -155,6 +155,9 @@ module tv80_core (/*AUTOARG*/
   wire [7:0]    ALU_Q;
   wire [7:0]    F_Out;
 
+  // Block-compare X/Y helper: CPI/CPD/CPIR/CPDR
+  wire [7:0]    cpi_xy_n = ALU_Q - {7'b0, F_Out[Flag_H]};
+
   // Registered micro code outputs
   reg [4:0]     Read_To_Reg_r;
   reg           Arith16_r;
@@ -839,14 +842,19 @@ module tv80_core (/*AUTOARG*/
                     end
                 end
 
-              if (tstate[1] && I_BT == 1'b1 ) 
+              if (tstate[1] && I_BT == 1'b1 )
                 begin
                   F[Flag_X] <= `TV80DELAY ALU_Q[3];
                   F[Flag_Y] <= `TV80DELAY ALU_Q[1];
                   F[Flag_H] <= `TV80DELAY 1'b0;
                   F[Flag_N] <= `TV80DELAY 1'b0;
                 end
-              if (I_BC == 1'b1 || I_BT == 1'b1 ) 
+              if (tstate[1] && I_BC == 1'b1 )
+                begin
+                  F[Flag_X] <= `TV80DELAY cpi_xy_n[3];
+                  F[Flag_Y] <= `TV80DELAY cpi_xy_n[1];
+                end
+              if (I_BC == 1'b1 || I_BT == 1'b1 )
                 begin
                   F[Flag_P] <= `TV80DELAY IncDecZ;
                 end
