@@ -118,7 +118,7 @@ bintr.ihx: bintr.c bintr_crt0.rel
 
 clean:
 	rm -f *.rel *.ihx *.vmem *.lnk *.map *.sym *.rst *.noi *.lk
-	rm -f fib.asm
+	rm -f fib.asm bintr.asm hello.asm
 
 # distclean also removes listing files (kept by clean for debugging)
 distclean: clean
