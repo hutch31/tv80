@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# 
+
+set -euo pipefail
+
+CONTAINER=hutch31/chisel-cocotb:0.2
+#COMMAND=$(basename "$0")
+
+# Check if the current directory is part of a Git repository
+if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    # Get the root directory of the current Git repository
+    GIT_ROOT=$(git rev-parse --show-toplevel)
+    
+    # Set the relative path based on the Git root
+    relative_path=$(realpath --relative-to="$GIT_ROOT" .)
+else
+    # Default to using '.' if not in a Git repository
+    relative_path="."
+    GIT_ROOT="."
+fi
+
+# Launch container to run cadtool
+podman run --rm -i \
+    --userns=keep-id \
+    --user "$(id -u):$(id -g)" \
+    -v "${GIT_ROOT}:/app" \
+    -w "/app/${relative_path}" \
+    "$CONTAINER" "$@"

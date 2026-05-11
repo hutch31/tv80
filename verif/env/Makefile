@@ -62,7 +62,7 @@ export TESTS_DIR
 # -Wno-WIDTHTRUNC   Suppress harmless width-truncation warnings
 # -Wno-CASEINCOMPLETE Suppress case-incomplete warnings common in RTL
 EXTRA_ARGS += --public-flat-rw
-EXTRA_ARGS += --coverage
+EXTRA_ARGS += --coverage --coverage-toggle --coverage-underscore
 EXTRA_ARGS += --timing
 EXTRA_ARGS += -Wno-WIDTHTRUNC
 EXTRA_ARGS += -Wno-CASEINCOMPLETE

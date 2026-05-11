@@ -39,7 +39,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cocotb and cocotb-bus
-RUN pip install cocotb==1.8.1 cocotb-bus 
+RUN pip install cocotb==2.0.1 cocotb-bus 
 
 # Install latest reed-solo
 RUN pip install --upgrade reedsolo
@@ -47,7 +47,7 @@ RUN pip install --upgrade reedsolo
 # Install Verilator
 RUN git clone https://github.com/verilator/verilator.git && \
     cd verilator && \
-    git checkout v5.022 && \
+    git checkout v5.036 && \
     autoconf && \
     ./configure && \
     make -j$(nproc) && \
