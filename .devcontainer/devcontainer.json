@@ -1,0 +1,8 @@
+{
+  "name": "Chiselware Container",
+  // Point this to your specific image registry and tag
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  }
+}

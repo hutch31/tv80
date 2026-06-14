@@ -114,7 +114,7 @@ bintr_crt0.rel: bintr_crt0.asm
 	$(AS) -l -o bintr_crt0.rel $<
 
 bintr.ihx: bintr.c bintr_crt0.rel
-	$(CC) --no-std-crt0 $^ -- -m -j -x
+	$(CC) --no-std-crt0 $^
 
 clean:
 	rm -f *.rel *.ihx *.vmem *.lnk *.map *.sym *.rst *.noi *.lk
